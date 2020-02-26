@@ -1,3 +1,8 @@
+"""
+Module to process the data coming from the .mat files.
+It can deal produce a multitude of input and training data structures, depending on the network shape that wants to be used.
+"""
+
 import os
 import numpy as np
 from scipy.io import loadmat
@@ -121,7 +126,7 @@ def prepare_data(data_paths, past_steps, future_steps, shuffle = True, X_type = 
             raise Exception("Invalid X_type argument")
             
         # Define data to be used as target
-        if split: # Whether to split the input data or not
+        if split: # Target changes depending on whether we are going to split the input data or not (in the first case only on quadrotor's trajectory is predicted, in the second one the trajectory of all quadrotors is)
             idx_quad_end = 1 # Necessary so that the array doesn't lose the last dimension
         else:
             idx_quad_end = None
