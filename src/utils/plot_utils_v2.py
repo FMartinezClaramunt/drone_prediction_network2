@@ -23,7 +23,8 @@ class plot_scenario(object):
         test_args['X_type'] = 'pos'
         
         X_plot_data, __ = prepare_data(test_data_paths, test_args, shuffle = False, relative = False)
-        self.past_trajectories = np.concatenate([X_plot_data[0], np.block(X_plot_data[1])], axis = 2)
+        # self.past_trajectories = np.concatenate([X_plot_data[0], np.block(X_plot_data[1])], axis = 2)
+        self.past_trajectories = np.concatenate(X_plot_data, axis = 2)
         
         X_test, Y_test = prepare_data(test_data_paths, args, shuffle = False)
         
@@ -32,13 +33,13 @@ class plot_scenario(object):
             input_scaler = args['input_scaler']
             output_scaler = args['output_scaler']
             X_test = scale_data(X_test, input_scaler)      
-            if args['kerasAPI'] == 'functional':
-                X_test = [X_test[0], X_test[1][0], X_test[1][1], X_test[1][2] ]
+            # if args['kerasAPI'] == 'functional':
+            #     X_test = [X_test[0], X_test[1][0], X_test[1][1], X_test[1][2] ]
             Y_predicted = model.predict(X_test)
             Y_predicted = unscale_output(Y_predicted, output_scaler)
         else:
-            if args['kerasAPI'] == 'functional':
-                X_test = [X_test[0], X_test[1][0], X_test[1][1], X_test[1][2] ]
+            # if args['kerasAPI'] == 'functional':
+            #     X_test = [X_test[0], X_test[1][0], X_test[1][1], X_test[1][2] ]
             Y_predicted = model.predict(X_test)
         
         # Convert predicted data to absolute position trajectories

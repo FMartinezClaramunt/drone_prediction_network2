@@ -11,12 +11,12 @@ tfkm = tf.keras.models
 
 ########## PARAMETER DEFINITION ##########
 model_savename = "./trained_models/shared_layer_model"
-TRAIN = False
+TRAIN = True
 SAVE_VIDEO = False
 DISPLAY_ANIMATION = True
 
-EPOCHS = 25
-PATIENCE = 5
+EPOCHS = 10
+PATIENCE = 3
 BATCH_SIZE = 32
 loss = 'mean_squared_error'
 # loss = 'huber_loss'
@@ -55,7 +55,7 @@ if TRAIN:
         'train_datasets': train_datasets,
         'validation_datasets': validation_datasets,
         'test_datasets': test_datasets,
-        'scale_data': False,
+        'scale_data': True,
         'kerasAPI': 'functional'
     }
     pkl.dump( args, open( model_savename + "_args.pkl", "wb" ) )
@@ -103,8 +103,8 @@ if TRAIN:
     mc = tfkc.ModelCheckpoint(model_savename + '_ckpt.h5', monitor='val_accuracy',\
                         mode='max', verbose=1, save_best_only=True)
     
-    X_train = [X_train[0], X_train[1][0], X_train[1][1], X_train[1][2]]
-    X_val = [X_val[0], X_val[1][0], X_val[1][1], X_val[1][2]]
+    # X_train = [X_train[0], X_train[1][0], X_train[1][1], X_train[1][2]]
+    # X_val = [X_val[0], X_val[1][0], X_val[1][1], X_val[1][2]]
     history = model.fit(X_train, Y_train, validation_data=(X_val, Y_val),epochs=EPOCHS, batch_size=BATCH_SIZE, callbacks=[es, mc])
 
     # Summarize history for accuracy

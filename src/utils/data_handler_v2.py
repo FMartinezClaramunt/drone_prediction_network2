@@ -152,6 +152,9 @@ def prepare_data(data_paths, args, shuffle = True, relative = True):
             X[1][i] = X[1][i][idxs]
         Y = Y[idxs]
 
+    # TODO: Data structure fix
+    X = [X[0], X[1][0], X[1][1], X[1][2]]
+
     return X, Y        
 
 def find_last_usable_step(goal_array, logsize, n_quads): 
@@ -195,7 +198,9 @@ def get_scaler(data, feature_range = (-1, 1)):
         scaler.append( skp.MinMaxScaler(feature_range=feature_range) )
 
         scaler[0].fit(reduce_sequence(data[0])) 
-        scaler[1].fit(reduce_sequence( np.vstack(data[1])))
+        # scaler[1].fit(reduce_sequence( np.vstack(data[1])))
+        # TODO: Data structure fix
+        scaler[1].fit(reduce_sequence( np.vstack(data[1:])))
     else: # For target data
         scaler = skp.MinMaxScaler(feature_range=feature_range)
         scaler.fit(reduce_sequence(data))
@@ -209,13 +214,20 @@ def scale_data(data, scaler):
         for horizon_step in range(data[0].shape[1]):
             data_scaled[0][:, horizon_step, :] = scaler[0].transform( data[0][:, horizon_step, :] )
         
-        aux = []
-        for other_quad_idx in range(len(data[1])):
-            aux.append( np.zeros_like(data[1][other_quad_idx]) )
-            for horizon_step in range(data[1][other_quad_idx].shape[1]):
-                aux[other_quad_idx][:, horizon_step, :] = scaler[1].transform( data[1][other_quad_idx][:, horizon_step, :] )
-        data_scaled.append(aux)
-    else:
+        # aux = []
+        # for other_quad_idx in range(len(data[1])):
+        #     aux.append( np.zeros_like(data[1][other_quad_idx]) )
+        #     for horizon_step in range(data[1][other_quad_idx].shape[1]):
+        #         aux[other_quad_idx][:, horizon_step, :] = scaler[1].transform( data[1][other_quad_idx][:, horizon_step, :] )
+        # data_scaled.append(aux)
+        
+        # TODO: Data structure fix
+        for other_quad in range(1, len(data)):
+            data_scaled.append( np.zeros_like(data[other_quad]) )
+            for horizon_step in range(data[other_quad].shape[1]):
+                data_scaled[other_quad][:, horizon_step, :] = scaler[1].transform( data[other_quad][:, horizon_step, :] )
+            
+    else: # For target data
         data_scaled = np.zeros_like(data)
         for horizon_step in range(data.shape[1]):
             data_scaled[:, horizon_step, :] = scaler.transform(data[:, horizon_step, :])
@@ -232,12 +244,17 @@ def unscale_output(Y_scaled, scaler):
 
 def get_batch(X, Y, batch_size, index):
     X_batch = []
-    X_batch.append(X[0][index:index+batch_size, :, :]) # Query agent state
     
-    aux = []
-    for other_quad_idx in range(len(X[1])):
-        aux.append( X[1][other_quad_idx][index:index+batch_size, :, :] ) # Other agents' states
-    X_batch.append(aux)
+    # TODO: Data structure fix
+    # X_batch.append(X[0][index:index+batch_size, :, :]) # Query agent state
+    # aux = []
+    # for other_quad_idx in range(len(X[1])):
+    #     aux.append( X[1][other_quad_idx][index:index+batch_size, :, :] ) # Other agents' states
+    #     X_batch.append( X[1][other_quad_idx][index:index+batch_size, :, :] ) # Other agents' states
+    # X_batch.append(aux)
+    
+    for quad_idx in range(len(X)):
+        X_batch.append( X[quad_idx][index:index+batch_size, :, :] ) # Other agents' states
     
     Y_batch = Y[index:index+batch_size, :, :]
     

@@ -157,14 +157,25 @@ class RNN(tfk.Model):
         self.other_quads_encoder = OtherQuadsEncoder(args)
         self.concat = tfkl.Concatenate()
         self.decoder = Decoder(args)
-        
+                
     def call(self, x):
         x1 = self.state_encoder(x[0])
-        x2a = self.other_quads_encoder(x[1][0])
-        x2b = self.other_quads_encoder(x[1][1])
-        x2c = self.other_quads_encoder(x[1][2])
+        # x2a = self.other_quads_encoder(x[1][0])
+        # x2b = self.other_quads_encoder(x[1][1])
+        # x2c = self.other_quads_encoder(x[1][2])
+        x2a = self.other_quads_encoder(x[1])
+        x2b = self.other_quads_encoder(x[2])
+        x2c = self.other_quads_encoder(x[3])
         concat = self.concat([x1, x2a, x2b, x2c])
         return self.decoder(concat)
+    
+    # def predict(self, x):
+    #     x1 = self.state_encoder.predict(x[0])
+    #     x2a = self.other_quads_encoder.predict(x[1][0])
+    #     x2b = self.other_quads_encoder.predict(x[1][1])
+    #     x2c = self.other_quads_encoder.predict(x[1][2])
+    #     concat = self.concat.predict([x1, x2a, x2b, x2c])
+    #     return self.decoder.predict(concat)
     
     @tf.function 
     def train_step(self, X, Y):
@@ -179,7 +190,7 @@ class RNN(tfk.Model):
     @tf.function
     def val_step(self, X, Y):
         predictions = self(X)
-        v_loss = loss_object(Y, predictions)
+        v_loss = self.loss_object(Y, predictions)
 
         self.val_loss(Y, predictions)
 

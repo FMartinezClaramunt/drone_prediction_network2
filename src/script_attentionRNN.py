@@ -5,6 +5,7 @@ import utils.data_handler_v2 as dh
 import utils.plot_utils_v2 as plu
 import matplotlib.pyplot as plt
 import pickle as pkl
+from progressbar import progressbar
 
 tfkc = tf.keras.callbacks
 tfkm = tf.keras.models
@@ -16,9 +17,9 @@ TRAIN = True
 SAVE_VIDEO = False
 DISPLAY_ANIMATION = True
 
-EPOCHS = 15
-PATIENCE = 5
-BATCH_SIZE = 32
+EPOCHS = 5
+PATIENCE = 3
+BATCH_SIZE = 64
 loss = 'mean_squared_error'
 # loss = 'huber_loss'
 optimizer = 'adam'
@@ -100,6 +101,7 @@ if args['scale_data']:
 # Construct model
 from models.attentionRNN import RNN
 model = RNN(args)
+model.compile(loss=model.loss_object, optimizer=model.optimizer)
 
 if TRAIN:
     
@@ -126,16 +128,20 @@ if TRAIN:
     counter = 0
 
     for epoch in range(EPOCHS):
+        start_time = time.time()
         model.train_loss.reset_states()
         model.val_loss.reset_states()
 
-        for i in range(0, X_train[0].shape[0], BATCH_SIZE):
+        print("Epoch %d/%d" % (epoch+1, EPOCHS))
+        print("Training")
+        for i in progressbar(range(0, X_train[0].shape[0], BATCH_SIZE)):
             X_batch, Y_batch = dh.get_batch(X_train, Y_train, BATCH_SIZE, i)
             model.train_step(X_batch, Y_batch)
 
-        for i in range(0, X_val[0].shape[0], BATCH_SIZE):
+        print("Validation")
+        for i in progressbar(range(0, X_val[0].shape[0], BATCH_SIZE)):
             X_batch, Y_batch = dh.get_batch(X_val, Y_val, BATCH_SIZE, i)
-            model.train_step(X_batch, Y_batch)
+            model.val_step(X_batch, Y_batch)
 
         if model.val_loss.result() < best_val_loss:
             print("Model improved")
@@ -147,7 +153,9 @@ if TRAIN:
             print("Model did not improve")
             counter += 1
 
-        print("Epoch: %d, Train loss: %.4f, Validation loss: %.4f" % (epoch, model.train_loss.result(), model.val_loss.result()))
+        end_time = time.time()
+
+        print("Train loss: %.4e, Validation loss: %.4e, Epoch time: %.1f sec\n" % (model.train_loss.result(), model.val_loss.result(), end_time-start_time))
 
         if counter >= PATIENCE:
             print("Early stopping")
@@ -156,12 +164,17 @@ if TRAIN:
     model = best_model
     
 else:
-    X_first = [X_train[0][0:1,:,:], [X_train[1][0][0:1,:,:], X_train[1][1][0:1,:,:], X_train[1][2][0:1,:,:]]]
+    # X_first = [X_train[0][0:1,:,:], [X_train[1][0][0:1,:,:], X_train[1][1][0:1,:,:], X_train[1][2][0:1,:,:]]]
+    # X_first = [X_train[0][0:1,:,:], X_train[1][0][0:1,:,:], X_train[1][1][0:1,:,:], X_train[1][2][0:1,:,:]]
+    X_first = [X_train[0][0:1,:,:], X_train[1][0:1,:,:], X_train[2][0:1,:,:], X_train[3][0:1,:,:]]
     model.call(X_first) # To define the sizes of the layers
     # Load weights into the model
     model.load_weights(model_savename + "_ckpt.h5")
+    # model.compile(loss=model.loss_object, optimizer=model.optimizer, metrics=['accuracy'])
 
-    model.compile(loss=loss, optimizer=optimizer, metrics=['accuracy'])
+if model.stateful: # Set model back to stateless for prediction
+    for i in range(len(model.layers)):
+        model.layers[i].stateful = False
 
 # model.evaluate(X_test, Y_test) # Quantitative evaluation on the test set
 
