@@ -154,5 +154,5 @@ class plot_scenario(object):
     def save_animation(self, ani):
         self.writer =  animation.writers['ffmpeg']
         self.writer = self.writer(fps=20, metadata=dict(artist='Me'), bitrate=1800, extra_args=['-vcodec', 'libx264'])
-        video_name = './Videos/video.mp4'
+        video_name = './videos/video.mp4'
         self.ani.save(video_name, writer=self.writer)

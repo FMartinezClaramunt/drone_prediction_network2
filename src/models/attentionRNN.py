@@ -14,8 +14,8 @@ class StateEncoder(tfkl.Layer):
         
         self.lstm_quad1 = tfkl.LSTM(self.rnn_state_size)
         self.repvec_quad = tfkl.RepeatVector(self.future_steps)
-        # self.lstm_quad2 = tfkl.LSTM(self.rnn_lstm_decoder_quad_size, return_sequences = False)
-        self.lstm_quad2 = tfkl.LSTM(self.rnn_lstm_decoder_quad_size, return_sequences = True)
+        self.lstm_quad2 = tfkl.LSTM(self.rnn_lstm_decoder_quad_size, return_sequences = False)
+        # self.lstm_quad2 = tfkl.LSTM(self.rnn_lstm_decoder_quad_size, return_sequences = True)
         
     def call(self, x):
         x = self.lstm_quad1(x)
@@ -33,8 +33,8 @@ class OtherQuadsEncoder(tfkl.Layer):
 
         self.lstm_other_quads1 = tfkl.LSTM(self.rnn_state_size_lstm_quad)
         self.repvec_other_quads = tfkl.RepeatVector(self.future_steps)
-        # self.lstm_other_quads2 = tfkl.LSTM(self.rnn_lstm_decoder_other_quads_size, return_sequences = False)
-        self.lstm_other_quads2 = tfkl.LSTM(self.rnn_lstm_decoder_other_quads_size, return_sequences = True)
+        self.lstm_other_quads2 = tfkl.LSTM(self.rnn_lstm_decoder_other_quads_size, return_sequences = False)
+        # self.lstm_other_quads2 = tfkl.LSTM(self.rnn_lstm_decoder_other_quads_size, return_sequences = True)
         
     def call(self, x):
         x = self.lstm_other_quads1(x)
@@ -51,17 +51,24 @@ class Decoder(tfkl.Layer):
         self.fc_hidden_unit_size = 256
         self.attention_units = 128
 
-        # self.lstm_concat = tfkl.LSTM(self.rnn_state_size_lstm_concat, return_sequences = True, return_state = True)
-        self.lstm_concat = tfkl.LSTM(self.rnn_state_size_lstm_concat, return_sequences = True, return_state = False)
+        self.concat = tfkl.Concatenate()
+        self.lstm_concat = tfkl.LSTM(self.rnn_state_size_lstm_concat, return_sequences = True, return_state = True)
+        # self.lstm_concat = tfkl.LSTM(self.rnn_state_size_lstm_concat, return_sequences = True, return_state = False)
         self.fc1 = tfkl.TimeDistributed(tfkl.Dense(self.fc_hidden_unit_size, activation = 'relu'))
         self.fco = tfkl.TimeDistributed(tfkl.Dense(self.output_dim))
         
         # self.attention = BahdanauAttention(self.attention_units)
+        self.attention = tfkl.Attention()
         
-    def call(self, x): # , hidden, enc_output):
-        # context_vector, attention_weights = self.attention(hidden, enc_output)
-        # x = tf.concat([tf.expand_dims(context_vector, 1), x], axis=-1)
+    def call(self, encoded_state, encoded_quads):
+        self.concat([encoded_state, ])
+        out, hidden = self.lstm_concat()
         
+        
+        att = self.attention(hidden, encoded_quads)
+        att = tf.soft
+        
+        # Old
         x = self.lstm_concat(x)
         x = self.fc1(x)
         return self.fco(x)
@@ -155,7 +162,6 @@ class RNN(tfk.Model):
         # Define architecture
         self.state_encoder = StateEncoder(args)
         self.other_quads_encoder = OtherQuadsEncoder(args)
-        self.concat = tfkl.Concatenate()
         self.decoder = Decoder(args)
                 
     def call(self, x):
@@ -166,8 +172,8 @@ class RNN(tfk.Model):
         x2a = self.other_quads_encoder(x[1])
         x2b = self.other_quads_encoder(x[2])
         x2c = self.other_quads_encoder(x[3])
-        concat = self.concat([x1, x2a, x2b, x2c])
-        return self.decoder(concat)
+        # concat = self.concat([x1, x2a, x2b, x2c])
+        return self.decoder(x1, [x2a, x2b, x2c])
     
     # def predict(self, x):
     #     x1 = self.state_encoder.predict(x[0])

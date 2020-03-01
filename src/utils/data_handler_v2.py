@@ -153,7 +153,10 @@ def prepare_data(data_paths, args, shuffle = True, relative = True):
         Y = Y[idxs]
 
     # TODO: Data structure fix
-    X = [X[0], X[1][0], X[1][1], X[1][2]]
+    X_new = [X[0]]
+    for i in range(len(X[1])):
+        X_new.append(X[1][i])
+    X = X_new
 
     return X, Y        
 
@@ -168,6 +171,8 @@ def find_last_usable_step(goal_array, logsize, n_quads):
                 zero_index = []
         if zero_index != []:
             break
+    if zero_index == []:
+        zero_index = goal_array.shape[1]
     final_timestep = min(zero_index-1, logsize) # Final time step
     return final_timestep
 
