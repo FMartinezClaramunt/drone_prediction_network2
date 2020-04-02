@@ -1,3 +1,4 @@
 trained_models/
 videos/
 test*
+*.pyc
