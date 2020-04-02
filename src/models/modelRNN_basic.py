@@ -66,10 +66,10 @@ def buildMultiInputModel(args): # Modified so that it returns 3D output
     pedestrian_vector_dim = args['input2_features']
     output_dim = args['output_features']
 
-    rnn_state_size = 32
+    rnn_state_size = 256
     rnn_state_size_lstm_grid = 256
-    rnn_state_size_lstm_quads = 128
-    rnn_state_size_lstm_concat = 510
+    rnn_state_size_lstm_quads = 256
+    rnn_state_size_lstm_concat = 512
     fc_hidden_unit_size = 256
 
     lambda_ = 0.01

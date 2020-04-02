@@ -16,7 +16,7 @@ TRAIN = True
 SAVE_VIDEO = False
 DISPLAY_ANIMATION = True
 
-EPOCHS = 25
+EPOCHS = 15
 PATIENCE = 5
 BATCH_SIZE = 32
 MULTI_INPUT = True
@@ -89,7 +89,7 @@ else:
 if TRAIN:
     model.compile(loss = loss, optimizer = optimizer, metrics = ['accuracy'])
 
-    es = tfkc.EarlyStopping(monitor='val_loss', mode='min', verbose=1, patience=PATIENCE)
+    es = tfkc.EarlyStopping(monitor='val_accuracy', mode='max', verbose=1, patience=PATIENCE)
     mc = tfkc.ModelCheckpoint(model_savename + '_ckpt.h5', monitor='val_accuracy',\
                         mode='max', verbose=1, save_best_only=True)
     
@@ -110,6 +110,6 @@ else:
     model.load_weights(model_savename + "_ckpt.h5")
     model.compile(loss = loss, optimizer = optimizer, metrics = ['accuracy'])
 
-# model.evaluate(X_test, Y_test) # Quantitative evaluation on the test set
+model.evaluate(X_test, Y_test) # Quantitative evaluation on the test set
 
 scene = plu.plot_scenario(model, args, save = SAVE_VIDEO, display = DISPLAY_ANIMATION)

@@ -25,7 +25,7 @@ def prepare_data(data_paths, args, shuffle = True, relative = True):
     Y_type = args['Y_type']
     
     # Define lists that will store inputs and targets
-    query_agent_inputs = []
+    query_agent_input = []
     other_agents_inputs = []
     targets = []
 
@@ -88,10 +88,9 @@ def prepare_data(data_paths, args, shuffle = True, relative = True):
                                       0:final_timestep - future_steps,\
                                       query_quad_idx]
             query_quad_sequence = expand_sequence(input1_data, past_steps)
-            query_agent_inputs.append(query_quad_sequence)
+            query_agent_input.append(query_quad_sequence)
             
             # Add second element to the list of inputs, which is the list of other agent's data
-            input2 = []
             input2_data = state_array[idx_X2_state_init:idx_X2_state_end,\
                                       0:final_timestep - future_steps,\
                                       :]
@@ -100,6 +99,7 @@ def prepare_data(data_paths, args, shuffle = True, relative = True):
                 query_agent_curr_pos = state_array[0:3, 0:final_timestep - future_steps, query_quad_idx:query_quad_idx+1]
                 input2_data[0:3, :, :] = input2_data[0:3, :, :] - query_agent_curr_pos # Relative positions to the query agent
             
+            input2 = []
             for quad_idx in other_quad_idxs:
                 other_quad_sequence = expand_sequence(input2_data[:,:,quad_idx], past_steps)
                 input2.append(other_quad_sequence)
@@ -123,40 +123,30 @@ def prepare_data(data_paths, args, shuffle = True, relative = True):
             # Add target to master list of targets
             targets.append(target)
     
-    X1 = np.vstack(query_agent_inputs)
+    # Stack all the data for the query agent through the first axis (samples)
+    X = [ np.vstack(query_agent_input) ]
     
-    # We create a list of lists to store the data for each quadrotor. This makes the assumpions that the number of quadrotors is the same for all experiments
-    # TODO: Find a way to structure the data so that experiments with a different number of quadrotors can be used 
-    X2_list = []
-    for __ in range(len(other_agents_inputs[0])):
+    n_experiments = len(other_agents_inputs)
+    n_other_agents = len(other_agents_inputs[0])
+    
+    X2_list = [] # To unpack the information of the other quadrotors
+    for __ in range(n_other_agents): # Number of other quadrotors
         X2_list.append([])
     
-    for experiment in range(len(other_agents_inputs)):
-        for quad in range(len(other_agents_inputs[experiment])): # We assume that all experiments have the same number of quadrotors
-            X2_list[quad].append(other_agents_inputs[experiment][quad])
-    
-    X2 = []
-    for quad in range(len(other_agents_inputs[experiment])):
-         X2.append( np.vstack(X2_list[quad]) )
-
-    X = []
-    X.append(X1)
-    X.append(X2)
+    for exp_idx in range(n_experiments): # For each of the experiments
+        for other_quad_idx in range(n_other_agents): # We assume that all experiments have the same number of quadrotors
+            X2_list[other_quad_idx].append(other_agents_inputs[exp_idx][other_quad_idx])
+        
+    for other_quad_idx in range(n_other_agents):
+        X.append(np.vstack(X2_list[other_quad_idx]))    
     
     Y = np.vstack(targets)
     
     if shuffle:
         idxs = np.random.permutation(Y.shape[0]) # Indexes to shuffle arays
-        X[0] = X[0][idxs]
-        for i in range(len(X[1])):
-            X[1][i] = X[1][i][idxs]
+        for i in range(len(X)):
+            X[i] = X[i][idxs]
         Y = Y[idxs]
-
-    # TODO: Data structure fix
-    X_new = [X[0]]
-    for i in range(len(X[1])):
-        X_new.append(X[1][i])
-    X = X_new
 
     return X, Y        
 

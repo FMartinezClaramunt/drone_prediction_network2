@@ -13,7 +13,7 @@ tfku = tf.keras.utils
 
 ########## PARAMETER DEFINITION ##########
 # model_savename = "./trained_models/attentionRNN_v3"
-model_savename = "./trained_models/varyingNQuads_v2"
+model_savename = "../trained_models/varyingNQuads_test"
 
 TRAIN = True
 WARM_START = False
@@ -21,8 +21,8 @@ WARM_START = False
 SAVE_VIDEO = False
 DISPLAY_ANIMATION = True
 
-EPOCHS = 15
-PATIENCE = 5
+EPOCHS = 5
+PATIENCE = 2
 BATCH_SIZE = 64
 
 # Only for functional API models
@@ -30,15 +30,15 @@ loss = 'mean_squared_error'
 # loss = 'huber_loss'
 optimizer = 'adam'
 
-data_folder = './data'
+data_folder = '../data'
 
 # List of datasets to use for training
 train_datasets = []
-train_datasets.append('dynamic16quads1')
-train_datasets.append('dynamic16quadsPosExchange')
-# train_datasets.append('basicNormalInteraction')
-# train_datasets.append('goalSequence1')
-# train_datasets.append('goalSequence2')
+# train_datasets.append('dynamic16quads1')
+# train_datasets.append('dynamic16quadsPosExchange')
+train_datasets.append('basicNormalInteraction')
+train_datasets.append('goalSequence1')
+train_datasets.append('goalSequence2')
 # train_datasets.append('goalSequence3')
 # train_datasets.append('goalSequence5')
 # train_datasets.append('goalSequence6')
@@ -46,18 +46,19 @@ train_datasets.append('dynamic16quadsPosExchange')
 
 # List of datasets to use for validation
 validation_datasets = []
-validation_datasets.append('dynamic16quads2')
-# validation_datasets.append('goalSequence4')
-# validation_datasets.append('goalSequence8')
+# validation_datasets.append('dynamic16quads2')
+validation_datasets.append('goalSequence4')
+validation_datasets.append('goalSequence8')
 
 # List of datasets to use for testing
 test_datasets = []
-test_datasets.append('goalSequence16quads1')
-# test_datasets.append('complexGoalSequence1')
+# test_datasets.append('dynamic16quadsPosExchange')
+# test_datasets.append('goalSequence16quads1')
+test_datasets.append('complexGoalSequence1')
 # test_datasets.append('basicHighInteraction')
 
 # Creation of variable to store the parameters
-if True: #TRAIN:
+if TRAIN:
     args = {
         'X_type': 'vel_full', # Data to be used as input (pos, vel, full, vel_pos, vel_full)
         'Y_type': 'vel', # Data to be used as target (pos or vel)
