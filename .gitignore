@@ -2,3 +2,5 @@ trained_models/
 videos/
 test*
 *.pyc
+*.mp4
+data/TFRecord/

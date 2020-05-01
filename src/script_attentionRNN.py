@@ -12,8 +12,9 @@ tfkm = tf.keras.models
 tfku = tf.keras.utils
 
 ########## PARAMETER DEFINITION ##########
-# model_savename = "./trained_models/attentionRNN_v3"
-model_savename = "../trained_models/varyingNQuads_test"
+# model_savename = "trained_models/old_models/attentionRNN_v3"
+# model_savename = "trained_models/old_models/varyingNQuads_test"
+model_savename = "trained_models/old_models/globalPlanner_test"
 
 TRAIN = True
 WARM_START = False
@@ -21,16 +22,19 @@ WARM_START = False
 SAVE_VIDEO = False
 DISPLAY_ANIMATION = True
 
-EPOCHS = 5
-PATIENCE = 2
+EPOCHS = 15
+PATIENCE = 5
 BATCH_SIZE = 64
+
+DT = 0.05
+# DT = 0.5
 
 # Only for functional API models
 loss = 'mean_squared_error'
 # loss = 'huber_loss'
 optimizer = 'adam'
 
-data_folder = '../data'
+data_folder = 'data/Raw'
 
 # List of datasets to use for training
 train_datasets = []
@@ -43,12 +47,14 @@ train_datasets.append('goalSequence2')
 # train_datasets.append('goalSequence5')
 # train_datasets.append('goalSequence6')
 # train_datasets.append('goalSequence7')
+# train_datasets.append('obsfree_q6_g500_1')
 
 # List of datasets to use for validation
 validation_datasets = []
 # validation_datasets.append('dynamic16quads2')
 validation_datasets.append('goalSequence4')
-validation_datasets.append('goalSequence8')
+# validation_datasets.append('goalSequence8')
+# validation_datasets.append('obsfree_q6_g50_3')
 
 # List of datasets to use for testing
 test_datasets = []
@@ -56,6 +62,7 @@ test_datasets = []
 # test_datasets.append('goalSequence16quads1')
 test_datasets.append('complexGoalSequence1')
 # test_datasets.append('basicHighInteraction')
+# test_datasets.append('obsfree_q6_g50_4')
 
 # Creation of variable to store the parameters
 if TRAIN:
@@ -200,4 +207,4 @@ if model.stateful: # Set model back to stateless for prediction
 
 # model.evaluate(X_test, Y_test) # Quantitative evaluation on the test set
 
-scene = plu.plot_scenario(model, args, save = SAVE_VIDEO, display = DISPLAY_ANIMATION, nframes = 1200, figsize=(12,9))
+scene = plu.plot_scenario(model, args, save = SAVE_VIDEO, display = DISPLAY_ANIMATION, nframes = 1200, figsize=(12,9), dt = DT)

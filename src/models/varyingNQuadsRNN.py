@@ -43,7 +43,6 @@ class Decoder(tfkl.Layer):
     
         self.rnn_state_size_lstm_concat = 512
         self.fc_hidden_unit_size = 256
-        self.attention_units = 128
 
         # self.concat = tfkl.Concatenate()
         self.lstm_concat = tfkl.LSTM(self.rnn_state_size_lstm_concat, name = 'lstm_decoder', return_sequences = True, return_state = False)

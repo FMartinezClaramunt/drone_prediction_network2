@@ -33,8 +33,9 @@ class OtherQuadsEncoder(tfkl.Layer):
         
     def call(self, x):
         other_quads = []
-        for x_quad in x:
-            other_quads.append(self.lstm_other_quads(x_quad))
+        # for x_quad in x:
+        for quad_idx in range(x.shape[-1]):
+            other_quads.append(self.lstm_other_quads(x[:, :, :, quad_idx]))
         stacked_other_quads = tf.stack(other_quads, axis = 1)
         out = self.bilstm(stacked_other_quads)
         return out
@@ -80,29 +81,28 @@ class FullModel(tfk.Model):
         self.decoder = Decoder()
                 
     def call(self, x):
-        x1 = self.state_encoder(x[0])
-        
-        x2 = self.other_quads_encoder(x[1:])
+        x1 = self.state_encoder(x["query_input"])
+        x2 = self.other_quads_encoder( x["others_input"] )
         concat = self.concat([x1, x2])
         repeated = self.repeat(concat)
         out = self.decoder(repeated)
         return out
     
     @tf.function 
-    def train_step(self, X, Y):
+    def train_step(self, x):
         with tf.GradientTape() as tape:
-            predictions = self(X)
-            loss = self.loss_object(Y, predictions)
+            predictions = self(x)
+            loss = self.loss_object(x["target"], predictions)
         gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
-        self.train_loss(Y, predictions)
+        self.train_loss(x["target"], predictions)
 
     @tf.function
-    def val_step(self, X, Y):
-        predictions = self(X)
-        v_loss = self.loss_object(Y, predictions)
+    def val_step(self, x):
+        predictions = self(x)
+        v_loss = self.loss_object(x["target"], predictions)
 
-        self.val_loss(Y, predictions)
+        self.val_loss(x["target"], predictions)
 
 

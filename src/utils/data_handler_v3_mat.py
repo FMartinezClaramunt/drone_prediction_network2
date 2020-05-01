@@ -37,11 +37,12 @@ class DataHandler():
         
     def getPlottingData(self, dataset_idx):
         
-        plotting_data = {
-            'trajectories': trajectories,
-            'predictions': predictions,
-            'goals': goals
-        }
+        pass
+        # return {
+        #     'trajectories': trajectories,
+        #     'predictions': predictions,
+        #     'goals': goals
+        # }
         
         
 # StackOverflow example
