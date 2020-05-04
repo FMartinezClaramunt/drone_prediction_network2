@@ -118,6 +118,37 @@ def save_model_summary(args, train_loss, val_loss, test_loss, termination_type):
     Store model summary
     """
     summary_file = "trained_models_summary.csv"
+    
+    new_row = [
+        args.model_name,
+        args.model_number,
+        train_loss,
+        val_loss,
+        test_loss,
+        args.past_horizon,
+        args.prediction_horizon,
+        args.query_input_type,
+        args.others_input_type,
+        args.obstacle_input_type,
+        args.target_type,
+        args.max_epochs,
+        args.max_steps,
+        args.train_patience,
+        args.batch_size,
+        termination_type,
+        args.datasets_training,
+        args.datasets_validation,
+        args.datasets_testing,
+        args.separate_goals,
+        args.size_query_agent_state,
+        args.size_other_agents_state,
+        args.size_other_agents_bilstm,
+        args.size_action_encoding,
+        args.size_decoder_lstm,
+        args.size_fc_layer,
+        datetime.now().strftime("%d/%m/%Y %H:%M") 
+    ]
+    
     # If the file does not exist already, create first row
     if not os.path.isfile(summary_file):
         with open(summary_file, 'w') as new_file:
@@ -129,10 +160,10 @@ def save_model_summary(args, train_loss, val_loss, test_loss, termination_type):
                 "Test loss",
                 "Past horizon",
                 "Prediction horizon",
-                "Query input type"
-                "Others input type"
-                "Obstacle input type"
-                "Target type"
+                "Query input type",
+                "Others input type",
+                "Obstacle input type",
+                "Target type",
                 "Max epochs",
                 "Max steps",
                 "Train patience",
@@ -150,47 +181,35 @@ def save_model_summary(args, train_loss, val_loss, test_loss, termination_type):
                 "Size fc layer",
                 "Date"
             ]
-            new_file.write(first_row)
+            
+            writer = csv.writer(new_file)
+            writer.writerow(first_row)
+
     
     with open(summary_file, 'r') as in_file:
         reader = csv.reader(in_file)
         lines = list(reader)
         if len(lines) == 1:
-            new_row_pos = 1
+            lines.append(new_row)
         else:
-            new_row_pos = ...
-            
-        new_row = [
-            args.model_name,
-            args.model_number,
-            train_loss,
-            val_loss,
-            test_loss,
-            args.past_horizon,
-            args.predction_horizon,
-            args.query_input_type,
-            args.others_input_type,
-            args.obstacle_input_type,
-            args.target_type,
-            args.max_epochs,
-            args.max_steps,
-            args.train_patience,
-            args.batch_size,
-            termination_type,
-            args.datasets_training,
-            args.datasets_validation,
-            args.datasets_testing,
-            args.separate_goals,
-            args.size_query_agent_state,
-            args.size_other_agents_state,
-            args.size_other_agents_bilstm,
-            args.size_action_encoding,
-            args.size_decoder_lstm,
-            args.size_fc_layer,
-            datetime.now().strftime("%d/%m/%Y %H:%M") 
-        ]
-        
-        lines.insert(new_row_pos, new_row)
+            rewrite = False
+            new_model = True
+            for idx in range(len(lines)):
+                if lines[idx][0] == new_row[0]: # If there are already models with the same name
+                    if new_model == True:
+                        new_idx = idx
+                        new_model = False
+
+                    if lines[idx][1] == new_row[1]: # If experiment number is the same, substitute data
+                        lines[idx] = new_row
+                        rewrite = True
+                    elif int(lines[idx][1]) < new_row[1]: # Else store the idx of the last data entry with an experiment number lower than the one of the new data
+                        new_idx = idx+1
+
+            if new_model:
+                lines.append(new_row)
+            elif not rewrite:
+                lines.insert(new_idx, new_row)
     
     with open(summary_file, 'w') as out_file:
         writer = csv.writer(out_file)
