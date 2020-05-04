@@ -44,84 +44,29 @@ class DataHandler():
         # Training datasets
         self.datasets_training = parse_dataset_names(args.datasets_training)
         self.tfrecords_training = self.getTFRecords(self.datasets_training)
+
+        self.scaler = self.getScaler() # Get scaler based on the data for the first quadrotor of the first training dataset
+        self.n_quadrotors = self.getNQuadrotors() # Get total number of quadrotors 
+
+        # Get dataset object for the training data
+        self.tfdataset_training = tf.data.TFRecordDataset(self.tfrecords_training).apply(self.dataset_setup)
         
         # Validation datasets
         if args.datasets_validation.lower() == "none":
             self.datasets_validation = []
+            self.tfdataset_validation = None
         else:
             self.datasets_validation = parse_dataset_names(args.datasets_validation)
             self.tfrecords_validation = self.getTFRecords(self.datasets_validation)
+            self.tfdataset_validation = tf.data.TFRecordDataset(self.tfrecords_validation).apply(lambda x: self.dataset_setup(x, shuffle=False))
         
         # Test datasets
-        # TODO: Maybe also use TFRecords for the test dataset
         if args.datasets_testing.lower() == "none":
             self.datasets_testing = []
         else:
             self.datasets_testing = parse_dataset_names(args.datasets_testing)
             self.tfrecords_testing = self.getTFRecords(self.datasets_testing)
-            self.tfdataset_testing = tf.data.TFRecordDataset(self.tfrecords_testing)
-            self.tfdataset_testing = self.tfdataset_testing.map(self._parse_function)
-            self.tfdataset_testing = self.tfdataset_testing.map(self.scaler.transform)
-            self.tfdataset_testing = self.tfdataset_testing.batch(self.batch_size)
-        
-        # Get total number of quadrotors 
-        self.n_quadrotors = self.getNQuadrotors()
-        
-        # Get scaler based on the data for the first quadrotor of the first training dataset
-        self.scaler = self.getScaler() 
-        
-        if self.train:
-            # Get dataset object for the training data
-            self.tfdataset_training = tf.data.TFRecordDataset(self.tfrecords_training)
-            self.tfdataset_training = self.tfdataset_training.map(self._parse_function).shuffle(buffer_size = int(1e7))
-            self.tfdataset_training = self.tfdataset_training.map(self.scaler.transform)
-            self.tfdataset_training = self.tfdataset_training.batch(self.batch_size, drop_remainder=True) # Drop remainder so that all batches have the same size
-            # self.tfdataset_training = self.tfdataset_training.batch(self.batch_size) # Drop remainder so that all batches have the same size
-            
-            # Get validation dataset
-            if len(self.datasets_validation) > 0:
-                self.tfdataset_validation = tf.data.TFRecordDataset(self.tfrecords_validation)
-                self.tfdataset_validation = self.tfdataset_validation.map(self._parse_function).map(self.scaler.transform)
-                self.tfdataset_validation = self.tfdataset_validation.batch(self.batch_size, drop_remainder=True) # Drop remainder so that all batches have the same size
-            else:
-                self.tfdataset_validation = None
-
-        
-    
-    # def getTrainingDataset(self): # TODO: Complete
-    #     """
-    #     Get dataset object for the training data
-    #     """
-    #     dataset = tf.data.TFRecordDataset(self.tfrecords_training)
-    #     dataset = dataset.map(self._parse_function).map(self.scaler.transform)
-    #     dataset = dataset.batch(self.batch_size, drop_remainder=True) # Drop remainder so that all batches have the same size
-    #     return dataset
-    
-    # def getValidationDataset(self): # TODO: Complete
-    #     """
-    #     Get dataset object for the training data
-    #     """
-    #     if len(self.datasets_validation) > 0:
-    #         dataset = tf.data.TFRecordDataset(self.tfrecords_validation)
-    #         dataset = dataset.map(self._parse_function).map(self.scaler.transform)
-    #         dataset = dataset.batch(self.batch_size, drop_remainder=True) # Drop remainder so that all batches have the same size
-    #     else:
-    #         dataset = None
-            
-    #     return dataset
-    
-    
-    # def getBatch(self): # TODO: Probably remove
-    #     """
-    #     Get batch for the training step
-    #     """
-        
-    #     pass
-    
-    # def getValidationBatch(self): # TODO: Probably remove
-    #     """
-    #     Get batch for the validation step
-    #     """
+            self.tfdataset_testing = tf.data.TFRecordDataset(self.tfrecords_testing).apply(lambda x: self.dataset_setup(x, shuffle=False))
     
     def getSampleInputBatch(self): # TODO: Probably remove, find replacement
         """
@@ -136,7 +81,7 @@ class DataHandler():
         
         return sample_batch
         
-    def getPlottingData(self, trained_model, test_dataset_idx = 0): # TODO: Write
+    def getPlottingData(self, trained_model, test_dataset_idx = 0, quads_to_plot = -1):
         """
         Takes converts data from the test set into data ready for plotting
         """
@@ -159,7 +104,12 @@ class DataHandler():
                                         3,\
                                         n_quads))
 
-        for quad_idx in range(n_quads):
+        if quads_to_plot == -1: # Plot all quads
+            quads_to_plot = [idx for idx in range(n_quads)]
+        elif type(quads_to_plot) == int:
+            quads_to_plot = [quads_to_plot]
+
+        for quad_idx in quads_to_plot:
             data_dict = self.preprocess_data(data, quad_idx, relative=True)
             scaled_data_dict = self.scaler.transform(data_dict)
             scaled_velocity_predictions = trained_model.predict(scaled_data_dict)
@@ -371,28 +321,13 @@ class DataHandler():
         parsed_features = tf.io.parse_single_example(example_proto, keys_to_features)
         return parsed_features
     
-# def npy_to_tfrecords(data_dict, filename):
-#     # Define writer object
-#     writer = tf.io.TFRecordWriter(filename)
-    
-#     # Get number of data samples and iterate over it
-#     n_samples = data_dict["query_robot_state"].shape[0]
-    
-#     for sample_idx in range(n_samples):
-#         feature = {}
-        
-#         # Each key in data_dict contains a dataset feature
-#         for key in data_dict.keys():
-#             feature[key] = tf.train.Feature(float_list=tf.train.FloatList(value=data_dict[key][sample_idx].flatten()))
-        
-#         # Store the features at each sampled step
-#         example = tf.train.Example(features=tf.train.Features(feature=feature))
-#         serialized = example.SerializeToString()
-#         writer.write(serialized)
-    
-#     # Close the writer object
-#     writer.close()
-    
+    def dataset_setup(self, dataset_in, shuffle = True):
+        dataset_out = dataset_in.map(self._parse_function)
+        if shuffle:
+            dataset_out = dataset_out.shuffle(buffer_size = int(1e7))
+        dataset_out = dataset_out.map(self.scaler.transform)
+        dataset_out = dataset_out.batch(self.batch_size, drop_remainder=True) # Drop remainder so that all batches have the same size
+        return dataset_out
 
 
 def find_last_usable_step(goal_array, logsize, n_quads): 

@@ -24,6 +24,7 @@ class plot_predictions():
         self.trajectories = data['trajectories']
         self.predictions = data['predictions']
         self.goals = data['goals']
+        self.plot_goals = args.plot_goals
         
         self.mins = self.trajectories.min(axis=-1).min(axis=0)-0.2
         self.maxs = self.trajectories.max(axis=-1).max(axis=0)+0.2
@@ -67,7 +68,7 @@ class plot_predictions():
         past_trajectories = [ self.ax.plot3D( [], [], [], color = 'b' )[0] for i in range(self.n_total_quadrotors) ]
         future_trajectories = [ self.ax.plot3D( [], [], [], color = 'g' )[0] for i in range(self.n_predicted_quadrotors) ]
         predicted_trajectories = [ self.ax.plot3D( [], [], [], color = 'r' )[0] for i in range(self.n_predicted_quadrotors) ]
-        if self.goals == []:
+        if self.goals == [] or not self.plot_goals:
             goals = None
             self.ax.legend(handles = [quadrotors[0], past_trajectories[0], future_trajectories[0], predicted_trajectories[0]], labels = ["Quadrotor", "Past trajectory", "Future trajectory", "Predicted trajectory"])
         else:
@@ -93,7 +94,7 @@ class plot_predictions():
             self.plot_objects['past_trajectories'][quad].set_data( self.trajectories[iteration:current_idx, 0, quad], self.trajectories[iteration:current_idx, 1, quad] )
             self.plot_objects['past_trajectories'][quad].set_3d_properties( self.trajectories[iteration:current_idx, 2, quad] )
             
-            if not self.plot_objects['goals'] == None:
+            if not self.plot_objects['goals'] == None and self.plot_goals:
                 self.plot_objects['goals'][quad].set_data( self.goals[current_idx-1, 0, quad], self.goals[current_idx-1, 1, quad])
                 self.plot_objects['goals'][quad].set_3d_properties( self.goals[current_idx-1, 2, quad])
 

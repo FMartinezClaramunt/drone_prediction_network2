@@ -1,5 +1,6 @@
 import os, sys, time
 from pathlib import Path
+from shutil import rmtree 
 from utils.data_handler_v3_tfrecord import DataHandler
 from utils.plot_utils_v3 import plot_predictions
 from utils.model_utils import parse_args, model_selector, combine_args, save_model_summary
@@ -18,38 +19,45 @@ trained_models_dir = os.path.join(root_dir, "trained_models", "")
 
 #### Model selection ####
 model_name = "varyingNQuadsRNN_v2"
-model_number = 1
+model_number = 3
 
 
 #### Script options ####
 TRAIN = True
 WARMSTART = False
 
-SUMMARY = False # To include a summary of the results of the model in a csv file
+SUMMARY = True # To include a summary of the results of the model in a csv file
 
 # To display and/or record an animation of the test dataset with the trajcetory predictions from the model
 DISPLAY = False
 RECORD = True
-N_FRAMES = 2500 # Number of frames to display/record
+N_FRAMES = 1500 # Number of frames to display/record
 DT = 0.05 # Used to compute the FPS of the video
-PLOT_GOALS = False # To plot the goals of the quadrotors
+PLOT_GOALS = True # To plot the goals of the quadrotors
 
 
 #### Datasets selection ####
-# datasets_training = "dynamic16quads1\
-#                     dynamic16quadsPosExchange"
-# datasets_validation = "dynamic16quads2"
-# datasets_test = "goalSequence16quads1"
+# datasets_training = "goalSequence1\
+#                     goalSequence2\
+#                     goalSequence3\
+#                     goalSequence4"
+# datasets_validation = "goalSequence5"
+# datasets_test = "goalSequence8"
 
-datasets_training = "obsfree_q16_g250_20200428-221906"
-datasets_validation = "obsfree_q16_g50_20200428-175033"
-datasets_test = "obsfree_q16_g50_20200429-144614"
+datasets_training = "dynamic16quads1\
+                    dynamic16quadsPosExchange"
+datasets_validation = "dynamic16quads2"
+datasets_test = "goalSequence16quads1"
+
+# datasets_training = "obsfree_q16_g250_20200428-221906"
+# datasets_validation = "obsfree_q16_g50_20200428-175033"
+# datasets_test = "obsfree_q16_g50_20200429-144614"
 
 
 #### Training parameters ####
 MAX_EPOCHS = 15
-MAX_STEPS = 1E6
-TRAIN_PATIENCE = 5 # Number of epochs before early stopping
+MAX_STEPS = 1E5
+TRAIN_PATIENCE = 4 # Number of epochs before early stopping
 BATCH_SIZE = 64 
 
 
@@ -80,6 +88,7 @@ args = parse_args(locals())
 model_dir = os.path.join(trained_models_dir, model_name, str(model_number), "")
 parameters_path = os.path.join(model_dir, "model_parameters.pkl")
 checkpoint_path = os.path.join(model_dir, "model_checkpoint.h5")
+recording_dir = os.path.join(model_dir, "Recordings", "")
 Path(model_dir).mkdir(parents=True, exist_ok=True)
 
 # Load model parameters if warmstarting the model or if we are testing it
@@ -88,6 +97,13 @@ if args.warmstart or not args.train:
     stored_args = pkl.load( open( parameters_path, "rb" ) )
     args = combine_args(args, stored_args) # To ensure the correct model architecture
 else:
+    if os.path.isfile(checkpoint_path):
+        print("WARNING: Rewriting previously trained model!")
+        Path(checkpoint_path).unlink() # Delete checkpoint if we are training a new model with an already existing experiment number to avoid problems if the training loop were to be prematurely stopped
+    
+    if os.path.isdir(recording_dir): # Delete recordings if we are training a new model with an already existing experiment number
+        rmtree(recording_dir) 
+    
     pkl.dump( args, open( parameters_path, "wb" ) )
 
 
@@ -111,8 +127,6 @@ if args.warmstart or not args.train: # TODO: check that this works
 
 #### Training loop ####
 if args.train:    
-    # TODO: Create a loop with trange for the steps in an epoch. For this, we need to know the number of samples in the training dataset, which we don't know right now
-    # steps_per_epoch = 
     step = 1
     
     best_loss = float("inf")
@@ -170,7 +184,7 @@ if args.train:
             break
         
     model = best_model
-    if termination_type == "none":
+    if termination_type.lower() == "none":
         termination_type = "Max epochs"
 
 # Set model back to stateless for prediction
@@ -179,25 +193,28 @@ if model.stateful:
         model.layers[i].stateful = False
 
 #### Model evaluation ####
-# TODO: Test model on testing datasets
+# TODO: Add a test with different prediction horizons, with a custom metric which only considers the displacement error at the last prediction step
 if args.datasets_testing != []:
     model.val_loss.reset_states()
-    model.val_step(batch)
-    pass
+    for batch in data.tfdataset_testing:
+        model.val_step(batch)
+    test_loss = float(model.val_loss.result())
+    print(f"Test loss: %e" % test_loss)
 
-# TODO: Implement summary writing function
 # Get summary of the model performance and store it in a CSV file
 if args.summary:
+    print("Saving summary of the model")
     save_model_summary(args, train_loss, val_loss, test_loss, termination_type)
 
 # Plot and/or record animation to evaluate the network's prediction performance 
 if args.display or args.record:
+    print("Getting test animation")
     for dataset_idx in range(len(data.datasets_testing)):
-        plotting_data = data.getPlottingData(model, dataset_idx)
+        plotting_data = data.getPlottingData(model, dataset_idx, quads_to_plot = -1) # quads_to_plot = -1 to plot predictions for all quadrotors
         
         # Path the recording will be stored if this option has been selected
         dataset_name = data.datasets_testing[dataset_idx]
-        recording_path = os.path.join(model_dir, "Recordings", dataset_name + ".mp4")
+        recording_path = os.path.join(recording_dir, dataset_name + ".mp4")
 
         # Create animation
         plot_predictions(plotting_data, args, recording_path)
