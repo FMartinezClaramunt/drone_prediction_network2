@@ -1,12 +1,13 @@
 import os, sys, time
+from copy import deepcopy
 from pathlib import Path
 from shutil import rmtree 
+from datetime import datetime
 from utils.data_handler_v3_tfrecord import DataHandler
 from utils.plot_utils_v3 import plot_predictions
-from utils.model_utils import parse_args, model_selector, combine_args, save_model_summary
+from utils.model_utils import parse_args, model_selector, combine_args, save_model_summary, save_fde_summary
 
 import pickle as pkl
-# from progressbar import progressbar
 from tqdm import trange
 
 #### Directory definitions ####
@@ -18,23 +19,26 @@ trained_models_dir = os.path.join(root_dir, "trained_models", "")
 
 
 #### Model selection ####
-model_name = "varyingNQuadsRNN_v2"
-model_number = 3
+# model_name = "varyingNQuadsRNN_v2"
+# model_name = "staticEllipsoidObstaclesRNN" # Same as dynamic, only the name changes
+model_name = "dynamicEllipsoidObstaclesRNN"
+model_number = 4
 
 
 #### Script options ####
-TRAIN = True
+TRAIN = False
 WARMSTART = False
 
-SUMMARY = True # To include a summary of the results of the model in a csv file
+SUMMARY = False # To include a summary of the results of the model in a csv file
 
 # To display and/or record an animation of the test dataset with the trajcetory predictions from the model
 DISPLAY = False
-RECORD = True
+RECORD = False
+EXPORT_PLOTTING_DATA = False
 N_FRAMES = 1500 # Number of frames to display/record
 DT = 0.05 # Used to compute the FPS of the video
 PLOT_GOALS = True # To plot the goals of the quadrotors
-
+PLOT_ELLIPSOIDS = False
 
 #### Datasets selection ####
 # datasets_training = "goalSequence1\
@@ -44,14 +48,18 @@ PLOT_GOALS = True # To plot the goals of the quadrotors
 # datasets_validation = "goalSequence5"
 # datasets_test = "goalSequence8"
 
-datasets_training = "dynamic16quads1\
-                    dynamic16quadsPosExchange"
-datasets_validation = "dynamic16quads2"
-datasets_test = "goalSequence16quads1"
+# datasets_training = "dynamic16quads1\
+#                     dynamic16quadsPosExchange"
+# datasets_validation = "dynamic16quads2"
+# datasets_test = "goalSequence16quads1"
 
-# datasets_training = "obsfree_q16_g250_20200428-221906"
-# datasets_validation = "obsfree_q16_g50_20200428-175033"
-# datasets_test = "obsfree_q16_g50_20200429-144614"
+# datasets_training = "staticObs6quad10_1"
+# datasets_validation = "staticObs6quad10_2"
+# datasets_test = "staticObs6quad10_2"
+
+datasets_training = "dynObs6quad10_3"
+datasets_validation = "dynObs6quad10_4"
+datasets_test = "dynObs6quad10_4"
 
 
 #### Training parameters ####
@@ -62,20 +70,25 @@ BATCH_SIZE = 64
 
 
 #### Network architecture ####
-# input_types = "vel relpos_vel"
-query_input_type = "vel"
-others_input_type = "relpos_vel"
-obstacle_input_type = "none"
-target_type = "vel"
+# Network types are unused so far
+query_input_type = "vel" # {vel}
+others_input_type = "relpos_vel" # {relpos_vel}
+obstacles_input_type = "dynamic" # {static, dynamic, dynamic_relvel}
+target_type = "vel" # {vel}
 
 past_horizon = 10
 prediction_horizon = 15
-separate_goals = True
+# test_prediction_horizons = "none"
+test_prediction_horizons = "5 10 15 20"
+separate_goals = True # To make sure that training trajectories keep goal position constant
+separate_obstacles = False # Only makes sense if using multiple steps of the obstacle state
 
 # Encoder sizes
 size_query_agent_state = 256
 size_other_agents_state = 256
 size_other_agents_bilstm = 256
+size_obstacles_fc_layer = 64
+size_obstacles_bilstm = 64
 size_action_encoding = 0
 
 # Decoder sizes
@@ -85,7 +98,18 @@ size_fc_layer = 256
 
 #### Parse args ####
 args = parse_args(locals())
-model_dir = os.path.join(trained_models_dir, model_name, str(model_number), "")
+if args.model_number == -1:
+    model_parent_dir = os.path.join(trained_models_dir, args.model_name)
+    if os.path.isdir(model_parent_dir):
+        trained_model_numbers = os.listdir(model_parent_dir)
+        if args.train: # Use next available model number
+            args.model_number = int(trained_model_numbers[-1]) + 1
+        else: # Use model with the highest model number
+            args.model_number = int(trained_model_numbers[-1])
+    else:
+        args.model_number = 0
+
+model_dir = os.path.join(trained_models_dir, args.model_name, str(args.model_number), "")
 parameters_path = os.path.join(model_dir, "model_parameters.pkl")
 checkpoint_path = os.path.join(model_dir, "model_checkpoint.h5")
 recording_dir = os.path.join(model_dir, "Recordings", "")
@@ -131,6 +155,8 @@ if args.train:
     
     best_loss = float("inf")
     patience_counter = 0
+    time_training_init = time.time()
+    print(f"\n[%s] Starting training of the model\n" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))
     
     for epoch in trange(args.max_epochs):
         # new_epoch = False
@@ -186,6 +212,8 @@ if args.train:
     model = best_model
     if termination_type.lower() == "none":
         termination_type = "Max epochs"
+        
+    train_time = time.time() - time_training_init
 
 # Set model back to stateless for prediction
 if model.stateful:
@@ -193,30 +221,58 @@ if model.stateful:
         model.layers[i].stateful = False
 
 #### Model evaluation ####
-# TODO: Add a test with different prediction horizons, with a custom metric which only considers the displacement error at the last prediction step
-if args.datasets_testing != []:
-    model.val_loss.reset_states()
-    for batch in data.tfdataset_testing:
-        model.val_step(batch)
-    test_loss = float(model.val_loss.result())
-    print(f"Test loss: %e" % test_loss)
+if len(args.test_prediction_horizons.split(" ")) > 1:
+    print(f"\n[%s] Evaluating FDE for different prediction horizons\n" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))
+    test_prediction_horizons_list = []
+    for pred_horizon in test_prediction_horizons.split(" "):
+        test_prediction_horizons_list.append(int(pred_horizon))
+    
+    test_args = deepcopy(args)
+    test_args.prediction_horizon = test_prediction_horizons_list[-1]
+    
+    trained_model = model_selector(test_args)
+    if not 'sample_input_batch' in locals():
+        sample_input_batch = data.getSampleInputBatch()
+    trained_model.call(sample_input_batch)
+    trained_model.load_weights(checkpoint_path)
+    
+    for i in range(len(trained_model.layers)):
+        trained_model.layers[i].stateful = False
+    
+    fde_list = data.evaluateFDE(trained_model, test_prediction_horizons_list)
+    
+    save_fde_summary(args, fde_list)
 
 # Get summary of the model performance and store it in a CSV file
 if args.summary:
-    print("Saving summary of the model")
-    save_model_summary(args, train_loss, val_loss, test_loss, termination_type)
+    print(f"\n[%s] Saving summary of the model\n" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))
+
+    if args.datasets_testing != []:
+        model.val_loss.reset_states()
+        for batch in data.tfdataset_testing:
+            model.val_step(batch)
+        test_loss = float(model.val_loss.result())
+        print(f"\nTest loss: %e\n" % test_loss)
+
+    save_model_summary(args, train_loss, val_loss, test_loss, termination_type, train_time)
 
 # Plot and/or record animation to evaluate the network's prediction performance 
-if args.display or args.record:
-    print("Getting test animation")
+if args.display or args.record or args.export_plotting_data:
+    print(f"\n[%s] Getting test animation\n" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))
+
     for dataset_idx in range(len(data.datasets_testing)):
         plotting_data = data.getPlottingData(model, dataset_idx, quads_to_plot = -1) # quads_to_plot = -1 to plot predictions for all quadrotors
         
         # Path the recording will be stored if this option has been selected
         dataset_name = data.datasets_testing[dataset_idx]
         recording_path = os.path.join(recording_dir, dataset_name + ".mp4")
+        export_plotting_data_path = os.path.join(recording_dir, dataset_name + ".mat")
 
-        # Create animation
-        plot_predictions(plotting_data, args, recording_path)
+        if args.export_plotting_data:
+            data.savePlottingData(export_plotting_data_path, plotting_data, max_samples = args.n_frames)
 
-print("Master script finished")
+        if args.display or args.record:
+            # Create animation
+            plot_predictions(plotting_data, args, recording_path)
+
+print(f"\n[%s] Master script finished" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))
