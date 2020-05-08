@@ -3,13 +3,14 @@ Data handler using TensorFlow input pipelines with .tfrecord files as input
 """
 import os
 import copy
+from pathlib import Path
 from glob import glob
 import numpy as np
 import tensorflow as tf
 import pickle as pkl
 from scipy.io import loadmat
 from scipy.linalg import hankel
-import sklearn.preprocessing as skp
+#import sklearn.preprocessing as skp
 from utils.model_utils import parse_dataset_names, parse_input_types
 
 class DataHandler():
@@ -40,6 +41,8 @@ class DataHandler():
         # Data directories
         self.raw_data_dir = args.raw_data_dir
         self.tfrecord_data_dir = args.tfrecord_data_dir
+        if not os.path.isdir(self.tfrecord_data_dir):
+            Path(self.tfrecord_data_dir).mkdir(parents=True, exist_ok=True)
         
         # Training datasets
         self.datasets_training = parse_dataset_names(args.datasets_training)

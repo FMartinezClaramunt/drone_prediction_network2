@@ -19,14 +19,14 @@ trained_models_dir = os.path.join(root_dir, "trained_models", "")
 
 #### Model selection ####
 model_name = "varyingNQuadsRNN_v2"
-model_number = 3
+model_number = 100
 
 
 #### Script options ####
-TRAIN = True
+TRAIN = False
 WARMSTART = False
 
-SUMMARY = True # To include a summary of the results of the model in a csv file
+SUMMARY = False # To include a summary of the results of the model in a csv file
 
 # To display and/or record an animation of the test dataset with the trajcetory predictions from the model
 DISPLAY = False

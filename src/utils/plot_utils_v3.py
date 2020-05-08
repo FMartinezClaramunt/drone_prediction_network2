@@ -111,4 +111,4 @@ class plot_predictions():
         self.writer = FFMpegWriter(fps=int(1/self.dt), metadata=dict(artist='Me'), bitrate=1800, extra_args=['-vcodec', 'libx264']) # Define animation writer
         video_dir = os.path.dirname(self.recording_path) # Video directory
         Path(video_dir).mkdir(parents=True, exist_ok=True) # Create video directory if it doesn't exist
-        self.ani.save(self.recording_path, writer=self.writer) # Save animatio
+        self.ani.save(self.recording_path, writer=self.writer) # Save animation
