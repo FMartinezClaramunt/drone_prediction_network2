@@ -365,7 +365,7 @@ class DataHandler():
                 
         return processed_data_dict
     
-    def makeTFRecords(self, dataset_name, separate_goals, separate_obstacles):
+    def makeTFRecords(self, dataset_name, root_name, separate_goals, separate_obstacles):
         """
         Makes TFRecords out of a raw dataset 
         """
@@ -382,9 +382,7 @@ class DataHandler():
             data_dict = self.preprocess_data(data, quad_idx, separate_goals=separate_goals, separate_obstacles=separate_obstacles)
             n_samples = data_dict["target"].shape[0]
             
-            # TODO: add an additional 3 digit code for the after the string
-            tfrecord_dataset_name = f"%s_quad%02d.tfrecord" % (dataset_name, quad_idx) 
-            # tfrecord_dataset_name = f"%s_ID%03d_quad%04d.tfrecord" % (dataset_name, tfrecord_ID, quad_idx) 
+            tfrecord_dataset_name = f"%s_quad%02d.tfrecord" % (root_name, quad_idx) 
             tfrecord_dataset_path = os.path.join(self.tfrecord_data_dir, tfrecord_dataset_name)
             
             writer = tf.io.TFRecordWriter(tfrecord_dataset_path)
@@ -413,29 +411,37 @@ class DataHandler():
             separate_goals = False
             separate_obstacles = False
         
+        common_params = copy.deepcopy(self.common_params)
+        common_params["separate_goals"] = separate_goals
+        common_params["separate_obstacles"] = separate_obstacles
+        
         # For each dataset
         for dataset_name in dataset_names:
             raw_dataset_path = os.path.join(self.raw_data_dir, dataset_name + ".mat")
             tfrecord_dataset_root_path = os.path.join(self.tfrecord_data_dir, dataset_name)
 
             # Check if TFRecords exist with the same parameters as the ones needed
+            params_ID = -1
             premade_records = False
-            if os.path.isfile(tfrecord_dataset_root_path + ".pkl"):
-                tfrecord_params = pkl.load( open( tfrecord_dataset_root_path + ".pkl", "rb" ) )
-                if tfrecord_params == self.common_params:
-                    print(f"Data for dataset '%s' has already been preprocessed" % dataset_name)
-                    tfrecord_dataset_list = glob(tfrecord_dataset_root_path + "*.tfrecord")
+            for params_ID, params_file in enumerate(glob(tfrecord_dataset_root_path + "*.pkl")):
+                tfrecord_params = pkl.load( open( params_file, "rb" ) )
+                if tfrecord_params == common_params:
+                    print(f"Data for dataset '%s' has already been preprocessed (ID = %04d)" % (dataset_name, params_ID))
                     premade_records = True
+                    # params_ID = idx
+                    tfrecord_dataset_root_path_with_index = tfrecord_dataset_root_path + f"_ID%04d" % params_ID
+                    tfrecord_dataset_list = glob(tfrecord_dataset_root_path_with_index + "*.tfrecord")
+                    break
 
             if not premade_records:
-                print(f"Preprocessing dataset '%s'"%dataset_name)
-                tfrecord_dataset_list = self.makeTFRecords(dataset_name, separate_goals=separate_goals, separate_obstacles=separate_obstacles)
+                params_ID += 1
 
-                temp_common_params = copy.deepcopy(self.common_params)
-                temp_common_params["separate_goals"] = separate_goals
-                temp_common_params["separate_obstacles"] = separate_obstacles
+                print(f"Preprocessing dataset '%s' with ID %04d" % (dataset_name, params_ID))
 
-                pkl.dump( self.common_params, open( tfrecord_dataset_root_path + ".pkl", "wb" ) )
+                tfrecord_dataset_root_path_with_index = tfrecord_dataset_root_path + f"_ID%04d" % params_ID
+                tfrecord_dataset_list = self.makeTFRecords(dataset_name, tfrecord_dataset_root_path_with_index, separate_goals=separate_goals, separate_obstacles=separate_obstacles)
+
+                pkl.dump( common_params, open( tfrecord_dataset_root_path_with_index + ".pkl", "wb" ) )
 
             for dataset in tfrecord_dataset_list:
                 all_tfrecord_dataset_list.append(dataset)
