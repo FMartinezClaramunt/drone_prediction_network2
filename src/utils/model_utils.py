@@ -187,7 +187,6 @@ def save_model_summary(args, train_loss, val_loss, test_loss, termination_type, 
                 "Size other agents biLSTM",
                 "Size obstacles FC layer",
                 "Size obstacles biLSTM",
-                "Size action encoding",
                 "Size decoder LSTM",
                 "Size fc layer",
                 "Training time (sec)",
@@ -235,15 +234,15 @@ def save_fde_summary(args, fde_list):
         args.model_number,
         args.past_horizon,
         args.prediction_horizon,
-        args.test_prediction_horizons
-    ]
-    
-    prediction_horizons = []
-    for idx, fde in enumerate(fde_list):
-        new_row.append(f"%e / %e" % (fde["position"], fde["velocity"]))
-        prediction_horizons.append(int(args.test_prediction_horizons.split(" ")[idx]))
-    
-    new_row.extend([
+        args.test_prediction_horizons,
+        fde_list[0]["position"],
+        fde_list[1]["position"],
+        fde_list[2]["position"],
+        fde_list[3]["position"],
+        fde_list[0]["velocity"],
+        fde_list[1]["velocity"],
+        fde_list[2]["velocity"],
+        fde_list[3]["velocity"],
         args.query_input_type,
         args.others_input_type,
         args.obstacles_input_type,
@@ -257,7 +256,11 @@ def save_fde_summary(args, fde_list):
         args.size_decoder_lstm,
         args.size_fc_layer,
         datetime.now().strftime("%d/%m/%Y %H:%M") 
-    ])
+    ]
+    
+    prediction_horizons = []
+    for prediction_horizon in args.test_prediction_horizons.split(" "):
+        prediction_horizons.append(int(prediction_horizon))
     
     # If the file does not exist already, create first row
     if not os.path.isfile(summary_file):
@@ -268,10 +271,14 @@ def save_fde_summary(args, fde_list):
                 "Training past horizon",
                 "Training prediction horizon",
                 "Test prediction horizons",
-                f"FDE@%d steps (pos / vel)" % prediction_horizons[0],
-                f"FDE@%d steps (pos / vel)" % prediction_horizons[1],
-                f"FDE@%d steps (pos / vel)" % prediction_horizons[2],
-                f"FDE@%d steps (pos / vel)" % prediction_horizons[3],
+                f"FDE@%d steps (pos)" % prediction_horizons[0],
+                f"FDE@%d steps (pos)" % prediction_horizons[1],
+                f"FDE@%d steps (pos)" % prediction_horizons[2],
+                f"FDE@%d steps (pos)" % prediction_horizons[3],
+                f"FDE@%d steps (vel)" % prediction_horizons[0],
+                f"FDE@%d steps (vel)" % prediction_horizons[1],
+                f"FDE@%d steps (vel)" % prediction_horizons[2],
+                f"FDE@%d steps (vel)" % prediction_horizons[3],
                 "Query input type",
                 "Others input type",
                 "Obstacle input type",

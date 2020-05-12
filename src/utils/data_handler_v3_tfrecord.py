@@ -19,6 +19,9 @@ class DataHandler():
         self.batch_size = args.batch_size
         self.past_horizon = args.past_horizon
         self.prediction_horizon = args.prediction_horizon
+        self.test_prediction_horizon_list = []
+        for prediction_horizon in args.test_prediction_horizons.split(" "):
+            self.test_prediction_horizon_list.append(int(prediction_horizon))
         self.separate_goals = args.separate_goals
         self.separate_obstacles = args.separate_obstacles
 
@@ -47,8 +50,9 @@ class DataHandler():
         self.tfrecord_data_dir = args.tfrecord_data_dir
         
         # Training datasets
+        print("Processing the training datasets")
         self.datasets_training = parse_dataset_names(args.datasets_training)
-        self.tfrecords_training = self.getTFRecords(self.datasets_training, train_data=True)
+        self.tfrecords_training = self.getTFRecords(self.datasets_training)
 
         self.scaler = self.getScaler() # Get scaler based on the data for the first quadrotor of the first training dataset
         self.n_quadrotors, self.n_obstacles = self.getNObjects() # Get total number of quadrotors 
@@ -63,43 +67,69 @@ class DataHandler():
         
         # Validation datasets
         if args.datasets_validation.lower() == "none":
+            print("No validation datasets have been specified")
             self.datasets_validation = []
             self.tfdataset_validation = None
         else:
+            print("Processing the validation datasets")
             self.datasets_validation = parse_dataset_names(args.datasets_validation)
             self.tfrecords_validation = self.getTFRecords(self.datasets_validation)
-            self.tfdataset_validation = tf.data.TFRecordDataset(self.tfrecords_validation).apply(lambda x: self.dataset_setup(x, shuffle=False))
+            self.tfdataset_validation = tf.data.TFRecordDataset(self.tfrecords_validation).apply(self.dataset_setup)
         
         # Test datasets
         if args.datasets_testing.lower() == "none":
+            print("No testing datasets have been specified")
             self.datasets_testing = []
+            self.datasets_fde_testing = []
+            self.tfdataset_testing= None
+            self.tfdataset_fde_testing = None
         else:
+            print("Processing the testing datasets")
             self.datasets_testing = parse_dataset_names(args.datasets_testing)
             self.tfrecords_testing = self.getTFRecords(self.datasets_testing)
-            self.tfdataset_testing = tf.data.TFRecordDataset(self.tfrecords_testing).apply(lambda x: self.dataset_setup(x, shuffle=False))
+            self.tfdataset_testing = tf.data.TFRecordDataset(self.tfrecords_testing).apply(self.dataset_setup)
+            
+            if len(self.test_prediction_horizon_list) == 4:
+                print("Processing the datasets to test FDEs for different prediction horizons")
+                params = copy.deepcopy(self.common_params)
+                params["prediction_horizon"] = self.test_prediction_horizon_list[-1]
+                self.datasets_fde_testing = parse_dataset_names(args.datasets_testing)
+                self.tfrecords_fde_testing = self.getTFRecords(self.datasets_fde_testing, params)
+
+                self.tfdataset_fde_testing = tf.data.TFRecordDataset(self.tfrecords_fde_testing).apply(lambda x: self.dataset_setup(x, params = params))
+            else:
+                self.datasets_fde_testing = []
+                self.tfdataset_fde_testing = None
+
+                if len(self.test_prediction_horizon_list) > 1:
+                    print("There should be 4 different prediction horizons to test")
+                else:
+                    print("[WARNING] No FDE testing will be performed")
+                    
+            # self.tfdataset_testing = tf.data.TFRecordDataset(self.tfrecords_testing).apply(lambda x: self.dataset_setup(x, shuffle=False))
     
-    def getSampleInputBatch(self): # TODO: Probably remove, find replacement
+    def getSampleInputBatch(self, dataset_type = "train"): 
         """
         Get sample input batch so that it can be used when calling the Keras model before loading the weights, either for testing or for a warm start
         """
-        if self.train:
+        if "train" in dataset_type:
             sample_batch = next(iter(self.tfdataset_training))
+        elif "val" in dataset_type:
+            sample_batch = next(iter(self.tfdataset_validation))
         else:
-            raw_dataset_path = os.path.join(self.raw_data_dir, self.datasets_testing[0] + '.mat')
-            data = loadmat(raw_dataset_path)
-            all_samples = self.scaler.transform(self.preprocess_data(data, 0))
-            sample_batch = {}
-            for key in all_samples.keys():
-                sample_batch[key] = all_samples[key][0:self.batch_size,]
-        
+            sample_batch = next(iter(self.tfdataset_testing))
+
         return sample_batch
         
-    def getPlottingData(self, trained_model, test_dataset_idx = 0, quads_to_plot = -1, prediction_horizon = None):
+    def getPlottingData(self, trained_model, test_dataset_idx = 0, quads_to_plot = -1, params = None):
         """
         Takes converts data from the test set into data ready for plotting
         """
-        if prediction_horizon == None:
-            prediction_horizon = self.prediction_horizon
+        
+        if params == None:
+            params = self.common_params
+        
+        prediction_horizon = params["prediction_horizon"]
         
         raw_dataset_path = os.path.join(self.raw_data_dir, self.datasets_testing[test_dataset_idx] + '.mat')
         data = loadmat(raw_dataset_path)
@@ -134,7 +164,7 @@ class DataHandler():
             quads_to_plot = [quads_to_plot]
 
         for quad_idx in quads_to_plot:
-            data_dict = self.preprocess_data(data, quad_idx, prediction_horizon=prediction_horizon, relative=True)
+            data_dict = self.preprocess_data(data, quad_idx, params=params, relative=True)
             scaled_data_dict = self.scaler.transform(data_dict)
             scaled_velocity_predictions = trained_model.predict(scaled_data_dict)
             scaled_data_dict["target"] = scaled_velocity_predictions
@@ -182,82 +212,15 @@ class DataHandler():
             data_to_save["quadrotor_future_trajectories"][iteration] = data['trajectories'][current_idx-1:future_idx, :, :]
             
         savemat(filename, data_to_save)
+    
+    def preprocess_data(self, data_, query_quad_idx, relative = True, params=None):
+        if params == None:
+            params = self.common_params
         
-    def evaluateFDE(self, trained_model, prediction_horizons_list, test_dataset_idx = 0):
-        prediction_horizon = prediction_horizons_list[-1]
-        
-        raw_dataset_path = os.path.join(self.raw_data_dir, self.datasets_testing[test_dataset_idx] + '.mat')
-        data = loadmat(raw_dataset_path)
-
-        goal_array = data['log_quad_goal'] # [goal pose (4), timesteps, quadrotors] 
-        state_array = data['log_quad_state_real'] # [states (9), timesteps, quadrotors] 
-        if 'log_obs_state_est' in data.keys():
-            obstacle_array = data['log_obs_state_est'] # [states (6), timesteps, obstacles] 
-            n_obstacles = obstacle_array.shape[2]
-        else:
-            n_obstacles = 0
-        logsize = int(data['logsize'])
-        n_quadrotors = goal_array.shape[2]
-
-        # Find last time step which can be used for training
-        final_timestep = find_last_usable_step(goal_array, logsize, n_quadrotors)
-
-        trajs = np.swapaxes(state_array[0:3, 0:final_timestep, :], 0, 1)
-        velocities = np.swapaxes(state_array[3:6, 0:final_timestep, :], 0, 1)
-        # goals = np.swapaxes(goal_array[0:3, 0:final_timestep, :], 0, 1)
-
-        position_prediction = np.zeros((trajs.shape[0]-prediction_horizon-self.past_horizon+1,\
-                                        prediction_horizon+1,\
-                                        3))
-
-        fde_unaveraged_list = [[[] for _ in range(n_quadrotors)] for _ in range(len(prediction_horizons_list))]
-        for quad_idx in range(n_quadrotors):
-            data_dict = self.preprocess_data(data, quad_idx, prediction_horizon=prediction_horizon, relative=True)
-            scaled_data_dict = self.scaler.transform(data_dict)
-            scaled_velocity_predictions = trained_model.predict(scaled_data_dict)
-            scaled_data_dict["target"] = scaled_velocity_predictions
-            unscaled_data = self.scaler.inverse_transform(scaled_data_dict)
-            unscaled_velocity_predictions = unscaled_data["target"]
-
-            position_prediction[:, 0, :] = trajs[self.past_horizon:-prediction_horizon+1, :, quad_idx]
-            for timestep in range(1, prediction_horizon+1):
-                position_prediction[:, timestep, :] = position_prediction[:, timestep-1, :] \
-                                                    + unscaled_velocity_predictions[:, timestep-1, :] * self.dt
-            
-            quad_fde_list = []
-            # TODO: The fact that we are considering different prediction horizons affects the size of the number of samples. We need to consider this when computing the FDE for each prediction horizon, since previously we were just considering that the indices run intil the end of the array
-            for step_idx, timestep in enumerate(prediction_horizons_list):                
-                if timestep == prediction_horizon:
-                    last_idx = None
-                else:
-                    last_idx = -(prediction_horizon-timestep)
-
-                fde = {}
-                fde["position"] = np.average(np.linalg.norm(trajs[self.past_horizon + timestep - 1:last_idx, :, quad_idx] - position_prediction[:, timestep, :], axis = 1))
-                fde["velocity"] = np.average(np.linalg.norm(velocities[self.past_horizon + timestep - 1:last_idx, :, quad_idx] - unscaled_velocity_predictions[:, timestep - 1, :], axis = 1))
-                
-                fde_unaveraged_list[step_idx][quad_idx] = fde
-        
-        fde_list = []
-        for step_idx in range(len(prediction_horizons_list)):
-            fde_position_sum = 0
-            fde_velocity_sum = 0
-            for fde in fde_unaveraged_list[step_idx]:
-                fde_position_sum += fde["position"]
-                fde_velocity_sum += fde["velocity"]
-            
-            fde = {"position": fde_position_sum/n_quadrotors,
-                   "velocity": fde_velocity_sum/n_quadrotors}
-            fde_list.append(fde)
-
-        return fde_list
-        
-    def preprocess_data(self, data_, query_quad_idx, relative = True, separate_goals = False, separate_obstacles = False, prediction_horizon = None, past_horizon = None):
-        if prediction_horizon == None:
-            prediction_horizon = self.prediction_horizon
-        
-        if past_horizon == None:
-            past_horizon = self.past_horizon
+        past_horizon = params["past_horizon"]
+        prediction_horizon = params["prediction_horizon"]
+        separate_goals = params["separate_goals"]
+        separate_obstacles = params["separate_obstacles"]
         
         processed_data_dict = {}
         
@@ -365,10 +328,12 @@ class DataHandler():
                 
         return processed_data_dict
     
-    def makeTFRecords(self, dataset_name, root_name, separate_goals, separate_obstacles):
+    def makeTFRecords(self, dataset_name, root_name, params=None):
         """
         Makes TFRecords out of a raw dataset 
         """
+        if params == None:
+            params = self.common_params
         
         raw_dataset_path = os.path.join(self.raw_data_dir, dataset_name + '.mat')
         tfrecord_dataset_list = []
@@ -379,7 +344,8 @@ class DataHandler():
         for quad_idx in range(n_quadrotors):
             print(f"Preprocessing data for quad %d out of %d" % (quad_idx+1, n_quadrotors))
             
-            data_dict = self.preprocess_data(data, quad_idx, separate_goals=separate_goals, separate_obstacles=separate_obstacles)
+            # data_dict = self.preprocess_data(data, quad_idx, separate_goals=params["separate_goals"], separate_obstacles=params["separate_obstacles"])
+            data_dict = self.preprocess_data(data, quad_idx, params=params)
             n_samples = data_dict["target"].shape[0]
             
             tfrecord_dataset_name = f"%s_quad%02d.tfrecord" % (root_name, quad_idx) 
@@ -399,22 +365,14 @@ class DataHandler():
         
         return tfrecord_dataset_list
     
-    def getTFRecords(self, dataset_names, train_data=False):
+    def getTFRecords(self, dataset_names, params = None):
         """
         Gets list of TFRecords for a list of datasets
         """
         all_tfrecord_dataset_list = []
-        if train_data == True:
-            separate_goals = self.separate_goals
-            separate_obstacles = self.separate_obstacles
-        else:
-            separate_goals = False
-            separate_obstacles = False
-        
-        common_params = copy.deepcopy(self.common_params)
-        common_params["separate_goals"] = separate_goals
-        common_params["separate_obstacles"] = separate_obstacles
-        
+        if params == None:
+            params = self.common_params
+
         # For each dataset
         for dataset_name in dataset_names:
             raw_dataset_path = os.path.join(self.raw_data_dir, dataset_name + ".mat")
@@ -425,7 +383,7 @@ class DataHandler():
             premade_records = False
             for params_ID, params_file in enumerate(glob(tfrecord_dataset_root_path + "*.pkl")):
                 tfrecord_params = pkl.load( open( params_file, "rb" ) )
-                if tfrecord_params == common_params:
+                if tfrecord_params == params:
                     print(f"Data for dataset '%s' has already been preprocessed (ID = %04d)" % (dataset_name, params_ID))
                     premade_records = True
                     # params_ID = idx
@@ -439,9 +397,9 @@ class DataHandler():
                 print(f"Preprocessing dataset '%s' with ID %04d" % (dataset_name, params_ID))
 
                 tfrecord_dataset_root_path_with_index = tfrecord_dataset_root_path + f"_ID%04d" % params_ID
-                tfrecord_dataset_list = self.makeTFRecords(dataset_name, tfrecord_dataset_root_path_with_index, separate_goals=separate_goals, separate_obstacles=separate_obstacles)
+                tfrecord_dataset_list = self.makeTFRecords(dataset_name, tfrecord_dataset_root_path_with_index, params)
 
-                pkl.dump( common_params, open( tfrecord_dataset_root_path_with_index + ".pkl", "wb" ) )
+                pkl.dump( params, open( tfrecord_dataset_root_path_with_index + ".pkl", "wb" ) )
 
             for dataset in tfrecord_dataset_list:
                 all_tfrecord_dataset_list.append(dataset)
@@ -503,15 +461,15 @@ class DataHandler():
 
         return data
     
-    def _parse_function(self, example_proto):
+    def _parse_function(self, example_proto, params):
         keys_to_features = {}
         for key in self.data_key_list:
             if key == "target":
-                shape = (self.prediction_horizon, 3)
+                shape = (params["prediction_horizon"], 3)
             elif key == "query_input":
-                shape = (self.past_horizon, 3)
+                shape = (params["past_horizon"], 3)
             elif key == "others_input":
-                shape = (self.past_horizon, 6, self.n_quadrotors-1)
+                shape = (params["past_horizon"], 6, self.n_quadrotors-1)
             elif key == "obstacles_input":
                 # shape = (self.past_horizon, 6, self.n_obstacles)
                 if self.data_types['obstacles_input_type'] == "static":
@@ -525,8 +483,11 @@ class DataHandler():
         parsed_features = tf.io.parse_single_example(example_proto, keys_to_features)
         return parsed_features
     
-    def dataset_setup(self, dataset_in, shuffle = True):
-        dataset_out = dataset_in.map(self._parse_function)
+    def dataset_setup(self, dataset_in, params = None, shuffle = True):
+        if params == None:
+            params = self.common_params
+            
+        dataset_out = dataset_in.map(lambda x: self._parse_function(x, params=params))
         if shuffle:
             dataset_out = dataset_out.shuffle(buffer_size = int(1e6))
         dataset_out = dataset_out.map(self.scaler.transform)

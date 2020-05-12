@@ -19,17 +19,17 @@ trained_models_dir = os.path.join(root_dir, "trained_models", "")
 
 
 #### Model selection ####
-# model_name = "varyingNQuadsRNN_v2"
+model_name = "varyingNQuadsRNN_v2"
 # model_name = "staticEllipsoidObstaclesRNN" # Same as dynamic, only the name changes
-model_name = "dynamicEllipsoidObstaclesRNN"
-model_number = 4
+# model_name = "dynamicEllipsoidObstaclesRNN"
+model_number = 6
 
 
 #### Script options ####
 TRAIN = False
 WARMSTART = False
 
-SUMMARY = False # To include a summary of the results of the model in a csv file
+SUMMARY = True # To include a summary of the results of the model in a csv file
 
 # To display and/or record an animation of the test dataset with the trajcetory predictions from the model
 DISPLAY = False
@@ -41,12 +41,12 @@ PLOT_GOALS = True # To plot the goals of the quadrotors
 PLOT_ELLIPSOIDS = False
 
 #### Datasets selection ####
-# datasets_training = "goalSequence1\
-#                     goalSequence2\
-#                     goalSequence3\
-#                     goalSequence4"
-# datasets_validation = "goalSequence5"
-# datasets_test = "goalSequence8"
+datasets_training = "goalSequence1\
+                    goalSequence2\
+                    goalSequence3\
+                    goalSequence4"
+datasets_validation = "goalSequence5"
+datasets_test = "goalSequence8"
 
 # datasets_training = "dynamic16quads1\
 #                     dynamic16quadsPosExchange"
@@ -57,9 +57,9 @@ PLOT_ELLIPSOIDS = False
 # datasets_validation = "staticObs6quad10_2"
 # datasets_test = "staticObs6quad10_2"
 
-datasets_training = "dynObs6quad10_3"
-datasets_validation = "dynObs6quad10_4"
-datasets_test = "dynObs6quad10_4"
+# datasets_training = "dynObs6quad10_3"
+# datasets_validation = "dynObs6quad10_4"
+# datasets_test = "dynObs6quad10_4"
 
 
 #### Training parameters ####
@@ -73,7 +73,7 @@ BATCH_SIZE = 64
 # Network types are unused so far
 query_input_type = "vel" # {vel}
 others_input_type = "relpos_vel" # {relpos_vel}
-obstacles_input_type = "dynamic" # {static, dynamic, dynamic_relvel}
+obstacles_input_type = "none" # {static, dynamic, dynamic_relvel}
 target_type = "vel" # {vel}
 
 past_horizon = 10
@@ -137,6 +137,7 @@ data = DataHandler(args)
 # tfdataset_validation = data.getValidationDataset()
 
 model = model_selector(args)
+train_time = 0
 train_loss = float('inf')
 val_loss = float('inf')
 test_loss = float('inf')
@@ -223,24 +224,25 @@ if model.stateful:
 #### Model evaluation ####
 if len(args.test_prediction_horizons.split(" ")) > 1:
     print(f"\n[%s] Evaluating FDE for different prediction horizons\n" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))
-    test_prediction_horizons_list = []
+    test_prediction_horizon_list = []
     for pred_horizon in test_prediction_horizons.split(" "):
-        test_prediction_horizons_list.append(int(pred_horizon))
+        test_prediction_horizon_list.append(int(pred_horizon))
     
     test_args = deepcopy(args)
-    test_args.prediction_horizon = test_prediction_horizons_list[-1]
+    test_args.prediction_horizon = test_prediction_horizon_list[-1]
     
     trained_model = model_selector(test_args)
-    if not 'sample_input_batch' in locals():
-        sample_input_batch = data.getSampleInputBatch()
+    sample_test_input_batch = data.getSampleInputBatch(dataset_type="test")
     trained_model.call(sample_input_batch)
     trained_model.load_weights(checkpoint_path)
-    
-    for i in range(len(trained_model.layers)):
-        trained_model.layers[i].stateful = False
-    
-    fde_list = data.evaluateFDE(trained_model, test_prediction_horizons_list)
-    
+
+    fde_list = []
+    for batch in data.tfdataset_fde_testing:
+        trained_model.testFDE_step(batch)
+        
+    for position_FDE, velocity_FDE in zip(trained_model.position_L2_errors, trained_model.velocity_L2_errors):
+        fde_list.append({"position": position_FDE.result().numpy(), "velocity": velocity_FDE.result().numpy()})
+        
     save_fde_summary(args, fde_list)
 
 # Get summary of the model performance and store it in a CSV file
