@@ -65,6 +65,7 @@ class FullModel(tfk.Model):
     def __init__(self, args):
         super().__init__()
         
+        self.dt = args.dt
         prediction_horizon = args.prediction_horizon
         
         # Define optimizer and loss
@@ -72,6 +73,17 @@ class FullModel(tfk.Model):
         self.optimizer = tfk.optimizers.Adam()
         self.train_loss = tfk.metrics.MeanSquaredError(name='train_loss')
         self.val_loss = tfk.metrics.MeanSquaredError(name='val_loss')
+        
+        self.test_prediction_horizons = []
+        self.position_L2_errors = []
+        self.velocity_L2_errors = []
+        if len(args.test_prediction_horizons.split(" ")) > 1:
+            for test_prediction_horizon in args.test_prediction_horizons.split(" "):
+                self.test_prediction_horizons.append(int(test_prediction_horizon))
+                # self.position_L2_errors.append(tfk.metrics.Mean(name='position_L2_error_at_' + test_prediction_horizon))
+                # self.velocity_L2_errors.append(tfk.metrics.Mean(name='velocity_L2_error_at_' + test_prediction_horizon))
+                self.position_L2_errors.append(tfk.metrics.RootMeanSquaredError(name='position_L2_error_at_' + test_prediction_horizon))
+                self.velocity_L2_errors.append(tfk.metrics.RootMeanSquaredError(name='velocity_L2_error_at_' + test_prediction_horizon))
         
         # Define architecture
         self.state_encoder = StateEncoder()
@@ -96,13 +108,35 @@ class FullModel(tfk.Model):
         gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
 
-        self.train_loss(x["target"], predictions)
+        self.train_loss.update_state(x["target"], predictions)
 
     @tf.function
     def val_step(self, x):
         predictions = self(x)
-        v_loss = self.loss_object(x["target"], predictions)
+        # v_loss = self.loss_object(x["target"], predictions)
 
-        self.val_loss(x["target"], predictions)
+        self.val_loss.update_state(x["target"], predictions)
+
+    @tf.function
+    def testFDE_step(self, x):
+        predictions = self(x)
+
+        batch_size = x["target"].shape[0]
+        new_target_position= tf.zeros([batch_size, 3])
+        new_predicted_position = tf.zeros([batch_size, 3])
+        
+        for idx in range(len(self.test_prediction_horizons)):
+            prediction_horizon = self.test_prediction_horizons[idx]
+
+            if idx == 0:
+                time_range = [i for i in range(prediction_horizon)]
+            else:
+                time_range = [i for i in range(self.test_prediction_horizons[idx-1], prediction_horizon)]
+
+            for time_step in time_range:     
+                new_target_position += x["target"][:, time_step, :] * self.dt
+                new_predicted_position += predictions[:, time_step, :] * self.dt
 
 
+            self.position_L2_errors[idx].update_state(new_target_position, new_predicted_position)
+            self.velocity_L2_errors[idx].update_state(x["target"][:,prediction_horizon-1,:], predictions[:, prediction_horizon-1, :])
