@@ -122,7 +122,7 @@ class FullModel(tfk.Model):
         out = self.decoder(repeated)
         return out
     
-    @tf.function 
+    # @tf.function 
     def train_step(self, x):
         with tf.GradientTape() as tape:
             predictions = self(x)

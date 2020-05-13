@@ -73,7 +73,7 @@ BATCH_SIZE = 64
 # Network types are unused so far
 query_input_type = "vel" # {vel}
 others_input_type = "relpos_vel" # {relpos_vel}
-obstacles_input_type = "dynamic_relvel" # {static, dynamic, dynamic_radii, dynamic_points6} (dynamic options can also use _relvel)
+obstacles_input_type = "none" # {none, static, dynamic, dynamic_radii, dynamic_points6} (dynamic options can also use _relvel)
 target_type = "vel" # {vel}
 
 past_horizon = 10

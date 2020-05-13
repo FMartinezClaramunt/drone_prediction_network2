@@ -231,13 +231,13 @@ class DataHandler():
         goal_array = data['log_quad_goal'] # [goal pose (4), timesteps, quadrotors] 
         state_array = data['log_quad_state_real'] # [states (9), timesteps, quadrotors] 
         
-        if 'log_obs_state_est' in data.keys():
+        if 'log_obs_state_est' in data.keys() and self.data_types['obstacles_input_type'] != "none":
             obstacle_array = data['log_obs_state_est'] # [states (6), timesteps, obstacles] 
             n_obstacles = obstacle_array.shape[2]
         else:
             n_obstacles = 0
         
-        if 'log_obs_size' in data.keys():
+        if 'log_obs_size' in data.keys() and self.data_types['obstacles_input_type'] != "none":
             obs_size_array = data['log_obs_size']
         else:
             obs_size_array = None
