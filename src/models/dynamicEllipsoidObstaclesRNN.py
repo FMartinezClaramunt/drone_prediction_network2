@@ -101,9 +101,7 @@ class FullModel(tfk.Model):
         self.velocity_L2_errors = []
         if len(args.test_prediction_horizons.split(" ")) > 1:
             for test_prediction_horizon in args.test_prediction_horizons.split(" "):
-                self.test_prediction_horizons = int(test_prediction_horizon)
-                # self.position_L2_errors.append(tfk.metrics.Mean(name='position_L2_error_at_' + test_prediction_horizon))
-                # self.velocity_L2_errors.append(tfk.metrics.Mean(name='velocity_L2_error_at_' + test_prediction_horizon))
+                self.test_prediction_horizons.append(int(test_prediction_horizon))
                 self.position_L2_errors.append(tfk.metrics.RootMeanSquaredError(name='position_L2_error_at_' + test_prediction_horizon))
                 self.velocity_L2_errors.append(tfk.metrics.RootMeanSquaredError(name='velocity_L2_error_at_' + test_prediction_horizon))
         
@@ -148,6 +146,7 @@ class FullModel(tfk.Model):
         batch_size = x["target"].shape[0]
         new_target_position= tf.zeros([batch_size, 3])
         new_predicted_position = tf.zeros([batch_size, 3])
+        
         for idx in range(len(self.test_prediction_horizons)):
             prediction_horizon = self.test_prediction_horizons[idx]
 

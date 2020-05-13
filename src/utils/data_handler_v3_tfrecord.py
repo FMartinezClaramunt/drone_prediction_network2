@@ -127,8 +127,10 @@ class DataHandler():
         """
         
         if params == None:
-            params = self.common_params
-        
+            params = copy.deepcopy(self.common_params)
+            params["separate_goals"] = False
+            params["separate_obstacles"] = False
+            
         prediction_horizon = params["prediction_horizon"]
         
         raw_dataset_path = os.path.join(self.raw_data_dir, self.datasets_testing[test_dataset_idx] + '.mat')
@@ -222,18 +224,24 @@ class DataHandler():
         separate_goals = params["separate_goals"]
         separate_obstacles = params["separate_obstacles"]
         
-        processed_data_dict = {}
-        
         data = copy.deepcopy(data_)
+        processed_data_dict = {}
         
         # Extract data from datafile
         goal_array = data['log_quad_goal'] # [goal pose (4), timesteps, quadrotors] 
         state_array = data['log_quad_state_real'] # [states (9), timesteps, quadrotors] 
+        
         if 'log_obs_state_est' in data.keys():
             obstacle_array = data['log_obs_state_est'] # [states (6), timesteps, obstacles] 
             n_obstacles = obstacle_array.shape[2]
         else:
             n_obstacles = 0
+        
+        if 'log_obs_size' in data.keys():
+            obs_size_array = data['log_obs_size']
+        else:
+            obs_size_array = None
+        
         logsize = int(data['logsize'])
         n_quadrotors = goal_array.shape[2]
         
@@ -256,29 +264,73 @@ class DataHandler():
                                         past_timesteps_idxs,\
                                         :]
 
+        if relative:
+            query_agent_curr_pos = state_array[0:3, past_timesteps_idxs, query_quad_idx:query_quad_idx+1]
+            others_input_data[0:3, :, :] = others_input_data[0:3, :, :] - query_agent_curr_pos # Relative positions to the query agent    
+
         if n_obstacles > 0:
             if self.data_types['obstacles_input_type'] == "static": # Static obstacles
                 # Only positions
                 obstacles_input_data = obstacle_array[0:3,\
                                                     past_timesteps_idxs,\
                                                     :]
-            elif self.data_types['obstacles_input_type'] == "dynamic":
+            elif "dynamic" in self.data_types['obstacles_input_type']: # Dynamic obstacles
                 # Positions and speeds
                 obstacles_input_data = obstacle_array[:,\
                                                     past_timesteps_idxs,\
                                                     :]
             else:
-                raise Exception("Invalid obstacles_input parameter")
+                raise Exception("Invalid obstacles input type")
+            
+            obstacles_input_data[0:3, :, :] = obstacles_input_data[0:3, :, :] - query_agent_curr_pos # Relative positions to the query agent
+                
+            if obs_size_array is not None:
+                obs_size_data = obs_size_array[:, past_timesteps_idxs, :]
 
-        if relative:
-            query_agent_curr_pos = state_array[0:3, past_timesteps_idxs, query_quad_idx:query_quad_idx+1]
-            others_input_data[0:3, :, :] = others_input_data[0:3, :, :] - query_agent_curr_pos # Relative positions to the query agent
-            if n_obstacles > 0:
-                obstacles_input_data[0:3, :, :] = obstacles_input_data[0:3, :, :] - query_agent_curr_pos # Relative positions to the query agent
+                if "radii" in self.data_types['obstacles_input_type']:
+                    obstacles_input_data = np.concatenate([obstacles_input_data,\
+                                                            obs_size_data], axis = 0)
+                    
+                elif "points" in self.data_types['obstacles_input_type']:
+                    # Increase in positions along all 3D axes in both directions
+                    deltas = np.zeros(obstacles_input_data.shape[0], obstacles_input_data.shape[1], obstacles_input_data.shape[2], 6)
+                    for i in range(6):
+                        deltas[int(i/2),:,:,i] = obs_size_data[int(i/2),:,:] * (-1)**i
+                    
+                    # if "points6" in self.data_types['obstacles_input_type']:
+                    #     # Stack array six times along axis = 2
+                    #     new_obstacles_input_data = np.tile(obstacles_input_data, [1, 1, 6])
+                        
+                    #     for i in range(6):
+                    #         new_obstacles_input_data[:, :, n_obstacles*i:n_obstacles*(i+1)] += deltas[:,:,:,i]
+                    
+                    # elif "points3" in self.data_types['obstacles_input_type']:
+                    #     # Stack array three times along axis = 2
+                    #     new_obstacles_input_data = np.tile(obstacles_input_data, [1, 1, 3])
+                        
+                    # else:
+                    #     raise Exception("Unimplemented obstacles input type")
+                    
+                    obstacles_input_data_6points = np.tile(obstacles_input_data[:,:,:,np.newaxis], [1, 1, 1, 6]) + deltas
+                    if "points6" in self.data_types['obstacles_input_type']:
+                        obstacles_input_data = np.reshape(obstacles_input_data_6points, [obstacles_input_data_6points.shape[0],\
+                                                                                        obstacles_input_data_6points.shape[1],\
+                                                                                        obstacles_input_data_6points.shape[2]*obstacles_input_data_6points.shape[3]])
+                    
+                    # elif "points3" in self.data_types['obstacles_input_type']:
+                    #     obstacles_input_data[0:3,] > 0
+                    else:
+                        raise Exception("Invalid obstacles input type")
+                        
+                        
+                    
+                
 
-        if "relvel" in self.data_types["obstacles_input_type"] and n_obstacles > 0:
+        if "dynamic" in self.data_types['obstacles_input_type'] and\
+            "relvel" in self.data_types["obstacles_input_type"] and\
+            n_obstacles > 0:
             query_agent_curr_vel = state_array[3:6, past_timesteps_idxs, query_quad_idx:query_quad_idx+1]
-            obstacles_input_data[3:6, :, :] = obstacles_input_data[3:6, :, :] - query_agent_curr_vel # Relative positions to the query agent
+            obstacles_input_data[3:6,] = obstacles_input_data[3:6,] - query_agent_curr_vel # Relative positions to the query agent
 
         others_input_list = []
         for quad_idx in other_quad_idxs:
@@ -474,8 +526,13 @@ class DataHandler():
                 # shape = (self.past_horizon, 6, self.n_obstacles)
                 if self.data_types['obstacles_input_type'] == "static":
                     shape = (3, self.n_obstacles)
-                elif self.data_types['obstacles_input_type'] == "dynamic":
+                elif self.data_types['obstacles_input_type'] == "dynamic"\
+                    or self.data_types['obstacles_input_type'] == "dynamic_relvel":
                     shape = (6, self.n_obstacles)
+                elif "dynamic_radii" in self.data_types['obstacles_input_type']:
+                    shape = (9, self.n_obstacles)
+                elif "dynamic_points6" in self.data_types['obstacles_input_type']:
+                    shape = (6, self.n_obstacles*6)
                 else:
                     raise Exception("Invalid obstacles_input parameter")
             keys_to_features[key] = tf.io.FixedLenFeature(shape, tf.float32)
@@ -484,7 +541,7 @@ class DataHandler():
         return parsed_features
     
     def dataset_setup(self, dataset_in, params = None, shuffle = True):
-        if params == None:
+        if params is None:
             params = self.common_params
             
         dataset_out = dataset_in.map(lambda x: self._parse_function(x, params=params))
