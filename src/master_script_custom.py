@@ -19,14 +19,14 @@ trained_models_dir = os.path.join(root_dir, "trained_models", "")
 
 
 #### Model selection ####
-model_name = "varyingNQuadsRNN_v2"
+# model_name = "varyingNQuadsRNN_v2"
 # model_name = "staticEllipsoidObstaclesRNN" # Same as dynamic, only the name changes
-# model_name = "dynamicEllipsoidObstaclesRNN"
-model_number = 6
+model_name = "dynamicEllipsoidObstaclesRNN"
+model_number = 11
 
 
 #### Script options ####
-TRAIN = False
+TRAIN = True
 WARMSTART = False
 
 SUMMARY = True # To include a summary of the results of the model in a csv file
@@ -35,18 +35,18 @@ SUMMARY = True # To include a summary of the results of the model in a csv file
 DISPLAY = False
 RECORD = False
 EXPORT_PLOTTING_DATA = False
-N_FRAMES = 1500 # Number of frames to display/record
+N_FRAMES = 500 # Number of frames to display/record
 DT = 0.05 # Used to compute the FPS of the video
 PLOT_GOALS = True # To plot the goals of the quadrotors
 PLOT_ELLIPSOIDS = False
 
 #### Datasets selection ####
-datasets_training = "goalSequence1\
-                    goalSequence2\
-                    goalSequence3\
-                    goalSequence4"
-datasets_validation = "goalSequence5"
-datasets_test = "goalSequence8"
+# datasets_training = "goalSequence1\
+#                     goalSequence2\
+#                     goalSequence3\
+#                     goalSequence4"
+# datasets_validation = "goalSequence5"
+# datasets_test = "goalSequence8"
 
 # datasets_training = "dynamic16quads1\
 #                     dynamic16quadsPosExchange"
@@ -57,15 +57,15 @@ datasets_test = "goalSequence8"
 # datasets_validation = "staticObs6quad10_2"
 # datasets_test = "staticObs6quad10_2"
 
-# datasets_training = "dynObs6quad10_3"
-# datasets_validation = "dynObs6quad10_4"
-# datasets_test = "dynObs6quad10_4"
+datasets_training = "dynObs10quad10_1"
+datasets_validation = "dynObs10quad10_2"
+datasets_test = "dynObs10quad10_2"
 
 
 #### Training parameters ####
-MAX_EPOCHS = 15
+MAX_EPOCHS = 5
 MAX_STEPS = 1E5
-TRAIN_PATIENCE = 4 # Number of epochs before early stopping
+TRAIN_PATIENCE = 2 # Number of epochs before early stopping
 BATCH_SIZE = 64 
 
 
@@ -73,7 +73,7 @@ BATCH_SIZE = 64
 # Network types are unused so far
 query_input_type = "vel" # {vel}
 others_input_type = "relpos_vel" # {relpos_vel}
-obstacles_input_type = "none" # {static, dynamic, dynamic_relvel}
+obstacles_input_type = "dynamic_relvel" # {static, dynamic, dynamic_radii, dynamic_points6} (dynamic options can also use _relvel)
 target_type = "vel" # {vel}
 
 past_horizon = 10
@@ -84,16 +84,16 @@ separate_goals = True # To make sure that training trajectories keep goal positi
 separate_obstacles = False # Only makes sense if using multiple steps of the obstacle state
 
 # Encoder sizes
-size_query_agent_state = 256
-size_other_agents_state = 256
-size_other_agents_bilstm = 256
-size_obstacles_fc_layer = 64
-size_obstacles_bilstm = 64
+size_query_agent_state = 256/4
+size_other_agents_state = 256/4
+size_other_agents_bilstm = 256/4
+size_obstacles_fc_layer = 64/4
+size_obstacles_bilstm = 64/4
 size_action_encoding = 0
 
 # Decoder sizes
-size_decoder_lstm = 512
-size_fc_layer = 256
+size_decoder_lstm = 512/4
+size_fc_layer = 256/4
 
 
 #### Parse args ####
@@ -108,6 +108,8 @@ if args.model_number == -1:
             args.model_number = int(trained_model_numbers[-1])
     else:
         args.model_number = 0
+
+print(f"Model name: %s, model number: %d" % (args.model_name, args.model_number))
 
 model_dir = os.path.join(trained_models_dir, args.model_name, str(args.model_number), "")
 parameters_path = os.path.join(model_dir, "model_parameters.pkl")
@@ -177,7 +179,7 @@ if args.train:
         train_loss = float(model.train_loss.result())
         
         # Validation step
-        if data.tfdataset_validation != None:
+        if data.tfdataset_validation is not None:
             for batch in data.tfdataset_validation:
                 model.val_step(batch)
             val_loss = float(model.val_loss.result())
@@ -233,7 +235,7 @@ if len(args.test_prediction_horizons.split(" ")) > 1:
     
     trained_model = model_selector(test_args)
     sample_test_input_batch = data.getSampleInputBatch(dataset_type="test")
-    trained_model.call(sample_input_batch)
+    trained_model.call(sample_test_input_batch)
     trained_model.load_weights(checkpoint_path)
 
     fde_list = []
