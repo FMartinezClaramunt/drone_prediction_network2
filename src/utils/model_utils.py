@@ -326,6 +326,142 @@ def save_fde_summary(args, fde_list):
         writer = csv.writer(out_file)
         writer.writerows(lines)
 
+def save_full_model_summary(args, train_loss, val_loss, test_loss, termination_type, train_time, fde_list):
+    """
+    Store model summary
+    """
+    summary_file = "trained_models_summary.csv"
+    
+    new_row = [
+        args.model_name,
+        args.model_number,
+        args.past_horizon,
+        args.prediction_horizon,
+        args.test_prediction_horizons,
+        train_loss,
+        val_loss,
+        test_loss,
+        fde_list[0]["position"],
+        fde_list[1]["position"],
+        fde_list[2]["position"],
+        fde_list[3]["position"],
+        fde_list[0]["velocity"],
+        fde_list[1]["velocity"],
+        fde_list[2]["velocity"],
+        fde_list[3]["velocity"],
+        args.query_input_type,
+        args.others_input_type,
+        args.obstacles_input_type,
+        args.target_type,
+        args.max_epochs,
+        args.max_steps,
+        args.train_patience,
+        args.batch_size,
+        termination_type,
+        args.datasets_training,
+        args.datasets_validation,
+        args.datasets_testing,
+        args.separate_goals,
+        args.separate_obstacles,
+        args.size_query_agent_state,
+        args.size_other_agents_state,
+        args.size_other_agents_bilstm,
+        args.size_obstacles_fc_layer,
+        args.size_obstacles_bilstm,
+        args.size_decoder_lstm,
+        args.size_fc_layer,
+        train_time,
+        datetime.now().strftime("%d/%m/%Y %H:%M") 
+    ]
+    
+    prediction_horizons = []
+    for prediction_horizon in args.test_prediction_horizons.split(" "):
+        prediction_horizons.append(int(prediction_horizon))
+    
+    # If the file does not exist already, create first row
+    if not os.path.isfile(summary_file):
+        with open(summary_file, 'w') as new_file:
+            first_row = [
+                "Model name", 
+                "Model number",
+                "Past horizon",
+                "Prediction horizon",
+                "Test prediction horizons",
+                "Training loss",
+                "Validation loss",
+                "Test loss",
+                f"FDE@%d steps (pos)" % prediction_horizons[0],
+                f"FDE@%d steps (pos)" % prediction_horizons[1],
+                f"FDE@%d steps (pos)" % prediction_horizons[2],
+                f"FDE@%d steps (pos)" % prediction_horizons[3],
+                f"FDE@%d steps (vel)" % prediction_horizons[0],
+                f"FDE@%d steps (vel)" % prediction_horizons[1],
+                f"FDE@%d steps (vel)" % prediction_horizons[2],
+                f"FDE@%d steps (vel)" % prediction_horizons[3],
+                "Query input type",
+                "Others input type",
+                "Obstacle input type",
+                "Target type",
+                "Max epochs",
+                "Max steps",
+                "Train patience",
+                "Batch size",
+                "Termination",
+                "Training datasets",
+                "Validation datasets",
+                "Test datasets",
+                "Separate goals",
+                "Separate obstacles",
+                "Size query agent state",
+                "Size other agents state",
+                "Size other agents biLSTM",
+                "Size obstacles FC layer",
+                "Size obstacles biLSTM",
+                "Size decoder LSTM",
+                "Size fc layer",
+                "Training time (sec)",
+                "Date"
+            ]
+            
+            writer = csv.writer(new_file)
+            writer.writerow(first_row)
+
+    
+    with open(summary_file, 'r') as in_file:
+        reader = csv.reader(in_file)
+        lines = list(reader)
+        if len(lines) == 1:
+            lines.append(new_row)
+        else:
+            rewrite = False
+            new_model = True
+            for idx in range(len(lines)):
+                if lines[idx][0] == new_row[0]: # If there are already models with the same name
+                    if new_model == True:
+                        new_idx = idx
+                        new_model = False
+
+                    if lines[idx][1] == new_row[1]: # If experiment number is the same, substitute data
+                        lines[idx] = new_row
+                        rewrite = True
+                    elif int(lines[idx][1]) < new_row[1]: # Else store the idx of the last data entry with an experiment number lower than the one of the new data
+                        new_idx = idx+1
+
+            if new_model:
+                lines.append(new_row)
+            elif not rewrite:
+                lines.insert(new_idx, new_row)
+    
+    with open(summary_file, 'w') as out_file:
+        writer = csv.writer(out_file)
+        writer.writerows(lines)
+
+
+
+
+
+
+
 def str2bool(string):
     if isinstance(string, bool):
         return string

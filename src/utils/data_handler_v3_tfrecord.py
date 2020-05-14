@@ -52,7 +52,7 @@ class DataHandler():
         # Training datasets
         print("Processing the training datasets")
         self.datasets_training = parse_dataset_names(args.datasets_training)
-        self.tfrecords_training = self.getTFRecords(self.datasets_training)
+        self.tfrecords_training = self.getTFRecords(self.datasets_training, self.common_params)
 
         self.scaler = self.getScaler() # Get scaler based on the data for the first quadrotor of the first training dataset
         self.n_quadrotors, self.n_obstacles = self.getNObjects() # Get total number of quadrotors 
@@ -73,28 +73,26 @@ class DataHandler():
         else:
             print("Processing the validation datasets")
             self.datasets_validation = parse_dataset_names(args.datasets_validation)
-            self.tfrecords_validation = self.getTFRecords(self.datasets_validation)
+            self.tfrecords_validation = self.getTFRecords(self.datasets_validation, self.common_params)
             self.tfdataset_validation = tf.data.TFRecordDataset(self.tfrecords_validation).apply(self.dataset_setup)
         
         # Test datasets
         if args.datasets_testing.lower() == "none":
             print("No testing datasets have been specified")
             self.datasets_testing = []
-            self.datasets_fde_testing = []
             self.tfdataset_testing= None
             self.tfdataset_fde_testing = None
         else:
             print("Processing the testing datasets")
             self.datasets_testing = parse_dataset_names(args.datasets_testing)
-            self.tfrecords_testing = self.getTFRecords(self.datasets_testing)
+            self.tfrecords_testing = self.getTFRecords(self.datasets_testing, self.common_params)
             self.tfdataset_testing = tf.data.TFRecordDataset(self.tfrecords_testing).apply(self.dataset_setup)
             
             if len(self.test_prediction_horizon_list) == 4:
                 print("Processing the datasets to test FDEs for different prediction horizons")
                 params = copy.deepcopy(self.common_params)
                 params["prediction_horizon"] = self.test_prediction_horizon_list[-1]
-                self.datasets_fde_testing = parse_dataset_names(args.datasets_testing)
-                self.tfrecords_fde_testing = self.getTFRecords(self.datasets_fde_testing, params)
+                self.tfrecords_fde_testing = self.getTFRecords(self.datasets_testing, params)
 
                 self.tfdataset_fde_testing = tf.data.TFRecordDataset(self.tfrecords_fde_testing).apply(lambda x: self.dataset_setup(x, params = params))
             else:
@@ -216,7 +214,7 @@ class DataHandler():
         savemat(filename, data_to_save)
     
     def preprocess_data(self, data_, query_quad_idx, relative = True, params=None):
-        if params == None:
+        if params is None:
             params = self.common_params
         
         past_horizon = params["past_horizon"]
@@ -264,10 +262,16 @@ class DataHandler():
                                         past_timesteps_idxs,\
                                         :]
 
-        if relative:
-            query_agent_curr_pos = state_array[0:3, past_timesteps_idxs, query_quad_idx:query_quad_idx+1]
+        # Store query agent's current position and velocity (they may also be used for the obstacle input)
+        query_agent_curr_pos = state_array[0:3, past_timesteps_idxs, query_quad_idx:query_quad_idx+1]
+        query_agent_curr_vel = state_array[3:6, past_timesteps_idxs, query_quad_idx:query_quad_idx+1]
+
+        if relative: # Relative postition for other agents
             others_input_data[0:3, :, :] = others_input_data[0:3, :, :] - query_agent_curr_pos # Relative positions to the query agent    
 
+        if "relvel" in self.data_types['others_input_type']: # Relative velocity for other agents
+            others_input_data[3:6, :, :] = others_input_data[3:6, :, :] - query_agent_curr_vel # Relative positions to the query agent
+            
         if n_obstacles > 0:
             if self.data_types['obstacles_input_type'] == "static": # Static obstacles
                 # Only positions
@@ -293,7 +297,7 @@ class DataHandler():
                     
                 elif "points" in self.data_types['obstacles_input_type']:
                     # Increase in positions along all 3D axes in both directions
-                    deltas = np.zeros(obstacles_input_data.shape[0], obstacles_input_data.shape[1], obstacles_input_data.shape[2], 6)
+                    deltas = np.zeros((obstacles_input_data.shape[0], obstacles_input_data.shape[1], obstacles_input_data.shape[2], 6))
                     for i in range(6):
                         deltas[int(i/2),:,:,i] = obs_size_data[int(i/2),:,:] * (-1)**i
                     
@@ -329,7 +333,6 @@ class DataHandler():
         if "dynamic" in self.data_types['obstacles_input_type'] and\
             "relvel" in self.data_types["obstacles_input_type"] and\
             n_obstacles > 0:
-            query_agent_curr_vel = state_array[3:6, past_timesteps_idxs, query_quad_idx:query_quad_idx+1]
             obstacles_input_data[3:6,] = obstacles_input_data[3:6,] - query_agent_curr_vel # Relative positions to the query agent
 
         others_input_list = []
@@ -341,7 +344,7 @@ class DataHandler():
 
         if n_obstacles > 0:
             obstacles_input_list = []
-            for obs_idx in range(n_obstacles):
+            for obs_idx in range(obstacles_input_data.shape[2]):
                 obstacle_sequence = expand_sequence(obstacles_input_data[:, :, obs_idx], past_horizon)
                 obstacles_input_list.append(obstacle_sequence)
             obstacles_input = np.stack(obstacles_input_list, axis=-1) # Stack along last dimension
@@ -380,12 +383,10 @@ class DataHandler():
                 
         return processed_data_dict
     
-    def makeTFRecords(self, dataset_name, root_name, params=None):
+    def makeTFRecords(self, dataset_name, root_name, params):
         """
         Makes TFRecords out of a raw dataset 
         """
-        if params == None:
-            params = self.common_params
         
         raw_dataset_path = os.path.join(self.raw_data_dir, dataset_name + '.mat')
         tfrecord_dataset_list = []
@@ -417,13 +418,11 @@ class DataHandler():
         
         return tfrecord_dataset_list
     
-    def getTFRecords(self, dataset_names, params = None):
+    def getTFRecords(self, dataset_names, params):
         """
         Gets list of TFRecords for a list of datasets
         """
         all_tfrecord_dataset_list = []
-        if params == None:
-            params = self.common_params
 
         # For each dataset
         for dataset_name in dataset_names:
@@ -433,7 +432,7 @@ class DataHandler():
             # Check if TFRecords exist with the same parameters as the ones needed
             params_ID = -1
             premade_records = False
-            for params_ID, params_file in enumerate(glob(tfrecord_dataset_root_path + "*.pkl")):
+            for params_ID, params_file in enumerate(sorted(glob(tfrecord_dataset_root_path + "*.pkl"))):
                 tfrecord_params = pkl.load( open( params_file, "rb" ) )
                 if tfrecord_params == params:
                     print(f"Data for dataset '%s' has already been preprocessed (ID = %04d)" % (dataset_name, params_ID))
