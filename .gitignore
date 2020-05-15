@@ -5,3 +5,4 @@ test*
 *.mp4
 data/TFRecord/
 .vscode/
+*.csv
