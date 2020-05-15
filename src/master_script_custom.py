@@ -38,17 +38,17 @@ trained_models_dir = os.path.join(root_dir, "trained_models", "")
 
 
 #### Model selection ####
-# model_name = "varyingNQuadsRNN_v2"
+model_name = "varyingNQuadsRNN_v2"
 # model_name = "staticEllipsoidObstaclesRNN" # Same as dynamic, only the name changes
-model_name = "dynamicEllipsoidObstaclesRNN"
-model_number = 11
+# model_name = "dynamicEllipsoidObstaclesRNN"
+model_number = 12
 
 
 #### Script options ####
-TRAIN = False
+TRAIN = True
 WARMSTART = False
 
-SUMMARY = False # To include a summary of the results of the model in a csv file
+SUMMARY = True # To include a summary of the results of the model in a csv file
 
 # To display and/or record an animation of the test dataset with the trajcetory predictions from the model
 DISPLAY = False
@@ -94,8 +94,8 @@ BATCH_SIZE = 64
 #### Network architecture ####
 # Network types are unused so far
 query_input_type = "vel" # {vel}
-others_input_type = "relpos_vel" # {relpos_vel, relpos_relvel}
-obstacles_input_type = "dynamic_points6_relvel" # {none, static, dynamic, dynamic_radii, dynamic_points6} (dynamic options can also use _relvel)
+others_input_type = "relpos_relvel" # {relpos_vel, relpos_relvel}
+obstacles_input_type = "none" # {none, static, dynamic, dynamic_radii, dynamic_points6} (dynamic options can also use _relvel)
 target_type = "vel" # {vel}
 
 past_horizon = 10
@@ -168,7 +168,8 @@ test_loss = float('inf')
 termination_type = "None"
 
 # Load weights if warmstarting the model or if we are testing it
-if args.warmstart or not args.train: # TODO: check that this works
+# if args.warmstart or not args.train: # TODO: check that this works
+if args.warmstart: # TODO: check that this works
     print(f"\n{bcolors.OKGREEN}[%s] Loading model %s, model number %d{bcolors.ENDC}\n" % (datetime.now().strftime("%d-%m-%y %H:%M:%S"), args.model_name, args.model_number))
     sample_input_batch = data.getSampleInputBatch()
     model.call(sample_input_batch)
@@ -220,7 +221,6 @@ if args.train:
             print(f"{bcolors.OKGREEN}%s loss improved, saving new best model{bcolors.ENDC}" % loss_type)
             model.save_weights(checkpoint_path)
             best_loss = curr_loss
-            best_model = deepcopy(model)
             patience_counter = 0
         else:
             print(f"{bcolors.FAIL}%s loss did not improve{bcolors.ENDC}" % loss_type)
@@ -235,11 +235,17 @@ if args.train:
             termination_type = "Max patience"
             break
         
-    model = best_model
     if termination_type.lower() == "none":
         termination_type = "Max epochs"
         
     train_time = time.time() - time_training_init
+
+# Retrieve best model
+model = model_selector(args)
+if 'sample_input_batch' not in locals():
+    sample_input_batch = data.getSampleInputBatch()
+model.call(sample_input_batch)
+model.load_weights(checkpoint_path)
 
 # Set model back to stateless for prediction
 if model.stateful:
