@@ -4,3 +4,4 @@ test*
 *.pyc
 *.mp4
 data/TFRecord/
+.vscode/
