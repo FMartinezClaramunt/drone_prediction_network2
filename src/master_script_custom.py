@@ -94,7 +94,7 @@ BATCH_SIZE = 64
 #### Network architecture ####
 # Network types are unused so far
 query_input_type = "vel" # {vel}
-others_input_type = "relpos_vel" # {relpos_vel}
+others_input_type = "relpos_vel" # {relpos_vel, relpos_relvel}
 obstacles_input_type = "dynamic_points6_relvel" # {none, static, dynamic, dynamic_radii, dynamic_points6} (dynamic options can also use _relvel)
 target_type = "vel" # {vel}
 
@@ -131,7 +131,7 @@ if args.model_number == -1:
     else:
         args.model_number = 0
 
-print(f"\n{bcolors.BOLD}{bcolors.HEADER}Model name: %s, model number: %d{bcolors.ENDC}" % (args.model_name, args.model_number))
+print(f"\n{bcolors.BOLD}{bcolors.HEADER}[%s] Starting master script. Model name: %s, model number: %d{bcolors.ENDC}" % (datetime.now().strftime("%d-%m-%y %H:%M:%S"), args.model_name, args.model_number))
 
 model_dir = os.path.join(trained_models_dir, args.model_name, str(args.model_number), "")
 parameters_path = os.path.join(model_dir, "model_parameters.pkl")
@@ -169,6 +169,7 @@ termination_type = "None"
 
 # Load weights if warmstarting the model or if we are testing it
 if args.warmstart or not args.train: # TODO: check that this works
+    print(f"\n{bcolors.OKGREEN}[%s] Loading model %s, model number %d{bcolors.ENDC}\n" % (datetime.now().strftime("%d-%m-%y %H:%M:%S"), args.model_name, args.model_number))
     sample_input_batch = data.getSampleInputBatch()
     model.call(sample_input_batch)
     model.load_weights(checkpoint_path)
@@ -198,13 +199,13 @@ if args.train:
                 print("Max number of steps reached, terminating early")
                 termination_type = "Max steps"
                 break
-        train_loss = float(model.train_loss.result())
+        train_loss = model.train_loss.result().numpy()
         
         # Validation step
         if data.tfdataset_validation is not None:
             for batch in data.tfdataset_validation:
                 model.val_step(batch)
-            val_loss = float(model.val_loss.result())
+            val_loss = model.val_loss.result().numpy()
             curr_loss = val_loss
             loss_type = "Validation"
         else:
@@ -217,10 +218,10 @@ if args.train:
         
         if curr_loss < best_loss:
             print(f"{bcolors.OKGREEN}%s loss improved, saving new best model{bcolors.ENDC}" % loss_type)
+            model.save_weights(checkpoint_path)
             best_loss = curr_loss
-            best_model = model
+            best_model = deepcopy(model)
             patience_counter = 0
-            best_model.save_weights(checkpoint_path)
         else:
             print(f"{bcolors.FAIL}%s loss did not improve{bcolors.ENDC}" % loss_type)
             patience_counter += 1        
@@ -246,44 +247,13 @@ if model.stateful:
         model.layers[i].stateful = False
 
 #### Model evaluation ####
-"""if len(args.test_prediction_horizons.split(" ")) > 1:
-    print(f"\n[%s] Evaluating FDE for different prediction horizons\n" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))
-    test_prediction_horizon_list = []
-    for pred_horizon in test_prediction_horizons.split(" "):
-        test_prediction_horizon_list.append(int(pred_horizon))
-    
-    test_args = deepcopy(args)
-    test_args.prediction_horizon = test_prediction_horizon_list[-1]
-    
-    trained_model = model_selector(test_args)
-    sample_test_input_batch = data.getSampleInputBatch(dataset_type="test")
-    trained_model.call(sample_test_input_batch)
-    trained_model.load_weights(checkpoint_path)
-
-    fde_list = []
-    for batch in data.tfdataset_fde_testing:
-        trained_model.testFDE_step(batch)
-        
-    for position_FDE, velocity_FDE in zip(trained_model.position_L2_errors, trained_model.velocity_L2_errors):
-        fde_list.append({"position": position_FDE.result().numpy(), "velocity": velocity_FDE.result().numpy()})
-        
-    save_fde_summary(args, fde_list)
-
-# Get summary of the model performance and store it in a CSV file
-if args.summary:
-    print(f"\n[%s] Saving summary of the model\n" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))
-
-    if args.datasets_testing != []:
-        model.val_loss.reset_states()
-        for batch in data.tfdataset_testing:
-            model.val_step(batch)
-        test_loss = float(model.val_loss.result())
-        print(f"\nTest loss: %e\n" % test_loss)
-
-    save_model_summary(args, train_loss, val_loss, test_loss, termination_type, train_time)"""
-
 if args.summary:
     print(f"\n{bcolors.OKGREEN}[%s] Saving summary of the model{bcolors.ENDC}\n" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))
+
+    # Retrieve best validation loss and corresponding training loss
+    last_train_loss = train_loss
+    train_loss = model.train_loss.result().numpy()
+    val_loss = model.val_loss.result().numpy()
 
     if args.datasets_testing != []:
         model.val_loss.reset_states()
@@ -294,7 +264,7 @@ if args.summary:
         
         fde_list = []
         if len(args.test_prediction_horizons.split(" ")) > 1:
-            print(f"[%s] Evaluating FDE for different prediction horizons\n" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))
+            print(f"{bcolors.OKBLUE}[%s] Evaluating FDE for different prediction horizons{bcolors.ENDC}\n" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))
             test_prediction_horizon_list = []
             for pred_horizon in test_prediction_horizons.split(" "):
                 test_prediction_horizon_list.append(int(pred_horizon))
@@ -317,7 +287,7 @@ if args.summary:
             for _ in range(4):
                 fde_list.append(fde)
 
-    save_full_model_summary(args, train_loss, val_loss, test_loss, termination_type, train_time, fde_list)
+    save_full_model_summary(args, last_train_loss, train_loss, val_loss, test_loss, termination_type, train_time, fde_list)
 
 # Plot and/or record animation to evaluate the network's prediction performance 
 if args.display or args.record or args.export_plotting_data:
@@ -338,4 +308,4 @@ if args.display or args.record or args.export_plotting_data:
             # Create animation
             plot_predictions(plotting_data, args, recording_path)
 
-print(f"\n{bcolors.BOLD}[%s] Master script finished{bcolors.ENDC}" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))
+print(f"\n{bcolors.BOLD}{bcolors.OKGREEN}[%s] Master script finished{bcolors.ENDC}" % datetime.now().strftime("%d-%m-%y %H:%M:%S"))

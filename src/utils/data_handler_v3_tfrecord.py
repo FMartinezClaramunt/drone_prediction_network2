@@ -11,6 +11,16 @@ from scipy.io import loadmat, savemat
 from scipy.linalg import hankel
 from utils.model_utils import parse_dataset_names, parse_input_types
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 class DataHandler():
     def __init__(self, args):
         # Data parameters
@@ -50,7 +60,7 @@ class DataHandler():
         self.tfrecord_data_dir = args.tfrecord_data_dir
         
         # Training datasets
-        print("Processing the training datasets")
+        print(f"{bcolors.OKBLUE}{bcolors.BOLD}Processing the training datasets{bcolors.ENDC}")
         self.datasets_training = parse_dataset_names(args.datasets_training)
         self.tfrecords_training = self.getTFRecords(self.datasets_training, self.common_params)
 
@@ -67,29 +77,29 @@ class DataHandler():
         
         # Validation datasets
         if args.datasets_validation.lower() == "none":
-            print("No validation datasets have been specified")
+            print(f"{bcolors.FAIL}No validation datasets have been specified{bcolors.ENDC}")
             self.datasets_validation = []
             self.tfdataset_validation = None
         else:
-            print("Processing the validation datasets")
+            print(f"{bcolors.OKBLUE}{bcolors.BOLD}Processing the validation datasets{bcolors.ENDC}")
             self.datasets_validation = parse_dataset_names(args.datasets_validation)
             self.tfrecords_validation = self.getTFRecords(self.datasets_validation, self.common_params)
             self.tfdataset_validation = tf.data.TFRecordDataset(self.tfrecords_validation).apply(self.dataset_setup)
         
         # Test datasets
         if args.datasets_testing.lower() == "none":
-            print("No testing datasets have been specified")
+            print(f"{bcolors.FAIL}No testing datasets have been specified{bcolors.ENDC}")
             self.datasets_testing = []
             self.tfdataset_testing= None
             self.tfdataset_fde_testing = None
         else:
-            print("Processing the testing datasets")
+            print(f"{bcolors.OKBLUE}{bcolors.BOLD}Processing the testing datasets{bcolors.ENDC}")
             self.datasets_testing = parse_dataset_names(args.datasets_testing)
             self.tfrecords_testing = self.getTFRecords(self.datasets_testing, self.common_params)
             self.tfdataset_testing = tf.data.TFRecordDataset(self.tfrecords_testing).apply(self.dataset_setup)
             
             if len(self.test_prediction_horizon_list) == 4:
-                print("Processing the datasets to test FDEs for different prediction horizons")
+                print(f"{bcolors.OKBLUE}{bcolors.BOLD}Processing the datasets to test FDEs for different prediction horizons{bcolors.ENDC}")
                 params = copy.deepcopy(self.common_params)
                 params["prediction_horizon"] = self.test_prediction_horizon_list[-1]
                 self.tfrecords_fde_testing = self.getTFRecords(self.datasets_testing, params)
@@ -100,9 +110,9 @@ class DataHandler():
                 self.tfdataset_fde_testing = None
 
                 if len(self.test_prediction_horizon_list) > 1:
-                    print("There should be 4 different prediction horizons to test")
+                    print(f"{bcolors.FAIL}There should be 4 different prediction horizons to test{bcolors.ENDC}")
                 else:
-                    print("[WARNING] No FDE testing will be performed")
+                    print(f"{bcolors.FAIL}[WARNING] No FDE testing will be performed{bcolors.ENDC}")
                     
             # self.tfdataset_testing = tf.data.TFRecordDataset(self.tfrecords_testing).apply(lambda x: self.dataset_setup(x, shuffle=False))
     
@@ -284,7 +294,7 @@ class DataHandler():
                                                     past_timesteps_idxs,\
                                                     :]
             else:
-                raise Exception("Invalid obstacles input type")
+                raise Exception(f"{bcolors.FAIL}Invalid obstacles input type{bcolors.ENDC}")
             
             obstacles_input_data[0:3, :, :] = obstacles_input_data[0:3, :, :] - query_agent_curr_pos # Relative positions to the query agent
                 
@@ -324,7 +334,7 @@ class DataHandler():
                     # elif "points3" in self.data_types['obstacles_input_type']:
                     #     obstacles_input_data[0:3,] > 0
                     else:
-                        raise Exception("Invalid obstacles input type")
+                        raise Exception(f"{bcolors.FAIL}Invalid obstacles input type{bcolors.ENDC}")
                         
                         
                     
@@ -435,7 +445,7 @@ class DataHandler():
             for params_ID, params_file in enumerate(sorted(glob(tfrecord_dataset_root_path + "*.pkl"))):
                 tfrecord_params = pkl.load( open( params_file, "rb" ) )
                 if tfrecord_params == params:
-                    print(f"Data for dataset '%s' has already been preprocessed (ID = %04d)" % (dataset_name, params_ID))
+                    print(f"{bcolors.OKGREEN}Data for dataset '%s' has already been preprocessed (ID = %04d){bcolors.ENDC}" % (dataset_name, params_ID))
                     premade_records = True
                     # params_ID = idx
                     tfrecord_dataset_root_path_with_index = tfrecord_dataset_root_path + f"_ID%04d" % params_ID
@@ -445,7 +455,7 @@ class DataHandler():
             if not premade_records:
                 params_ID += 1
 
-                print(f"Preprocessing dataset '%s' with ID %04d" % (dataset_name, params_ID))
+                print(f"{bcolors.WARNING}Preprocessing dataset '%s' with ID %04d{bcolors.ENDC}" % (dataset_name, params_ID))
 
                 tfrecord_dataset_root_path_with_index = tfrecord_dataset_root_path + f"_ID%04d" % params_ID
                 tfrecord_dataset_list = self.makeTFRecords(dataset_name, tfrecord_dataset_root_path_with_index, params)
@@ -533,7 +543,7 @@ class DataHandler():
                 elif "dynamic_points6" in self.data_types['obstacles_input_type']:
                     shape = (6, self.n_obstacles*6)
                 else:
-                    raise Exception("Invalid obstacles_input parameter")
+                    raise Exception(f"{bcolors.FAIL}Invalid obstacles_input parameter{bcolors.FAIL}")
             keys_to_features[key] = tf.io.FixedLenFeature(shape, tf.float32)
 
         parsed_features = tf.io.parse_single_example(example_proto, keys_to_features)
@@ -611,7 +621,7 @@ class scaler():
                 self.mins[key] = data[key].min(axis=3).min(axis=0).min(axis=0)
                 self.maxs[key] = data[key].max(axis=3).max(axis=0).max(axis=0)
             else:
-                raise Exception("Data does not have the expected dimensions")
+                raise Exception(f"{bcolors.FAIL}Data does not have the expected dimensions{bcolors.ENDC}")
         
         
     def transform(self, data):
@@ -631,7 +641,7 @@ class scaler():
                     X_std = (data[key] - self.mins[key][np.newaxis, :, np.newaxis])/(self.maxs[key][np.newaxis, :, np.newaxis] - self.mins[key][np.newaxis, :, np.newaxis])
                     scaled_data[key] = X_std * (self.feature_range[1]-self.feature_range[0]) + self.feature_range[0]
                 else:
-                    raise Exception("Data does not have the expected dimensions")
+                    raise Exception(f"{bcolors.FAIL}Data does not have the expected dimensions{bcolors.ENDC}")
                 
             else:
                 # unscaled_data = data[key]
@@ -643,7 +653,7 @@ class scaler():
                     X_std = (data[key] - self.mins[key][np.newaxis, np.newaxis, :, np.newaxis])/(self.maxs[key][np.newaxis, np.newaxis, :, np.newaxis] - self.mins[key][np.newaxis, np.newaxis, :, np.newaxis])
                     scaled_data[key] = X_std * (self.feature_range[1]-self.feature_range[0]) + self.feature_range[0]
                 else:
-                    raise Exception("Data does not have the expected dimensions")
+                    raise Exception(f"{bcolors.FAIL}Data does not have the expected dimensions{bcolors.ENDC}")
                 
         return scaled_data
     

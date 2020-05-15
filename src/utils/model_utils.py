@@ -326,11 +326,11 @@ def save_fde_summary(args, fde_list):
         writer = csv.writer(out_file)
         writer.writerows(lines)
 
-def save_full_model_summary(args, train_loss, val_loss, test_loss, termination_type, train_time, fde_list):
+def save_full_model_summary(args, last_train_loss, train_loss, val_loss, test_loss, termination_type, train_time, fde_list):
     """
     Store model summary
     """
-    summary_file = "trained_models_summary.csv"
+    summary_file = "trained_models_summary_v2.csv"
     
     new_row = [
         args.model_name,
@@ -338,6 +338,7 @@ def save_full_model_summary(args, train_loss, val_loss, test_loss, termination_t
         args.past_horizon,
         args.prediction_horizon,
         args.test_prediction_horizons,
+        last_train_loss,
         train_loss,
         val_loss,
         test_loss,
@@ -387,7 +388,8 @@ def save_full_model_summary(args, train_loss, val_loss, test_loss, termination_t
                 "Past horizon",
                 "Prediction horizon",
                 "Test prediction horizons",
-                "Training loss",
+                "Lowest training loss",
+                "Saved model training loss",
                 "Validation loss",
                 "Test loss",
                 f"FDE@%d steps (pos)" % prediction_horizons[0],
