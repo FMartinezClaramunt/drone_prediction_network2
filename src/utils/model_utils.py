@@ -1,6 +1,7 @@
 import sys, os, argparse, csv
 from copy import deepcopy
 from datetime import datetime
+from pathlib import Path
 
 # sys.path.append("../") # This line is needed if we want to import modules using "src." at the beginning
 
@@ -10,6 +11,16 @@ def parse_args(defaults):
     #### Model selection ####
     parser.add_argument('--model_name', type=str, default=defaults['model_name'])
     parser.add_argument('--model_number', type=int, default=defaults['model_number'])
+    
+    parser.add_argument('--transfer_learning_others', type=str2bool, default=defaults['TRANSFER_LEARNING_OTHERS'])
+    parser.add_argument('--learning_rate_others_encoder', type=float, default=defaults['learning_rate_others_encoder'])
+    parser.add_argument('--model_name_others_encoder', type=str, default=defaults['model_name_others_encoder'])
+    parser.add_argument('--model_number_others_encoder', type=str, default=defaults['model_number_others_encoder'])
+
+    parser.add_argument('--transfer_learning_obstacles', type=str2bool, default=defaults['TRANSFER_LEARNING_OBSTACLES'])
+    parser.add_argument('--learning_rate_obstacles_encoder', type=float, default=defaults['learning_rate_obstacles_encoder'])
+    parser.add_argument('--model_name_obstacles_encoder', type=str, default=defaults['model_name_obstacles_encoder'])
+    parser.add_argument('--model_number_obstacles_encoder', type=str, default=defaults['model_number_obstacles_encoder'])
     
     parser.add_argument('--raw_data_dir', type=str, default=defaults['raw_data_dir'])
     parser.add_argument('--tfrecord_data_dir', type=str, default=defaults['tfrecord_data_dir'])
@@ -87,6 +98,8 @@ def model_selector(args):
         from models.varyingNQuadsRNN_v2 import FullModel
     elif args.model_name == "dynamicEllipsoidObstaclesRNN" or args.model_name == "staticEllipsoidObstaclesRNN":
         from models.dynamicEllipsoidObstaclesRNN import FullModel
+    elif args.model_name == "onlyEllipsoidObstaclesRNN":
+        from models.onlyEllipsoidObstaclesRNN import FullModel
     else:
         raise Exception("Unrecognised model name")
 
@@ -106,12 +119,14 @@ def combine_args(parsed_args, stored_args):
     new_args.target_type = stored_args.target_type
     
     new_args.past_horizon = stored_args.past_horizon
-    new_args.prediction_horizon = stored_args.prediction_horizon
+    # new_args.prediction_horizon = stored_args.prediction_horizon
 
     # Encoder sizes
-    new_args.prediction_horizon = stored_args.prediction_horizon
-    new_args.prediction_horizon = stored_args.prediction_horizon
+    new_args.size_query_agent_state = stored_args.size_query_agent_state
+    new_args.size_other_agents_state = stored_args.size_other_agents_state
     new_args.size_other_agents_bilstm = stored_args.size_other_agents_bilstm
+    new_args.size_obstacles_fc_layer = stored_args.size_obstacles_fc_layer
+    new_args.size_obstacles_bilstm = stored_args.size_obstacles_bilstm
     new_args.size_action_encoding = stored_args.size_action_encoding
 
     # Decoder sizes
@@ -459,7 +474,14 @@ def save_full_model_summary(args, last_train_loss, train_loss, val_loss, test_lo
         writer.writerows(lines)
 
 
+def get_paths(trained_models_dir, args):
+    model_dir = os.path.join(trained_models_dir, args.model_name, str(args.model_number), "")
+    parameters_path = os.path.join(model_dir, "model_parameters.pkl")
+    checkpoint_path = os.path.join(model_dir, "model_checkpoint.h5")
+    recording_dir = os.path.join(model_dir, "Recordings", "")
+    Path(model_dir).mkdir(parents=True, exist_ok=True)
 
+    return parameters_path, checkpoint_path, recording_dir
 
 
 

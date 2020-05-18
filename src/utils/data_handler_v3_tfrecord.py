@@ -40,7 +40,6 @@ class DataHandler():
         self.model_name = args.model_name
         self.model_number = args.model_number
 
-        # TODO: implement the processing of different data types, as of now it considers velocity query input, full state others input, no obstacles input and velocity target
         self.data_types = {
             "query_input_type": args.query_input_type.lower(),
             "others_input_type": args.others_input_type.lower(),
@@ -254,14 +253,16 @@ class DataHandler():
             obs_size_array = None
         
         logsize = int(data['logsize'])
+        if len(goal_array.shape) == 2:
+            goal_array = goal_array[:,:,np.newaxis]
+            state_array = state_array[:,:,np.newaxis]
+        
         n_quadrotors = goal_array.shape[2]
         
         # Find last time step which can be used for training
         final_timestep = find_last_usable_step(goal_array, logsize, n_quadrotors)
         past_timesteps_idxs = [idx for idx in range(0, final_timestep - prediction_horizon)]
         future_timesteps_idxs = [idx for idx in range(past_horizon, final_timestep)]
-        
-        other_quad_idxs = [idx for idx in range(n_quadrotors) if idx != query_quad_idx]
                 
         # Add first element of the list of inputs, which corresponds to the query agent's data
         query_input_data = state_array[3:6,\
@@ -279,7 +280,7 @@ class DataHandler():
         query_agent_curr_pos = state_array[0:3, past_timesteps_idxs, query_quad_idx:query_quad_idx+1]
         query_agent_curr_vel = state_array[3:6, past_timesteps_idxs, query_quad_idx:query_quad_idx+1]
 
-        if relative: # Relative postition for other agents
+        if relative and "pos" in self.data_types['others_input_type']: # Relative postition for other agents
             others_input_data[0:3, :, :] = others_input_data[0:3, :, :] - query_agent_curr_pos # Relative positions to the query agent    
 
         if "relvel" in self.data_types['others_input_type']: # Relative velocity for other agents
@@ -339,21 +340,20 @@ class DataHandler():
                     else:
                         raise Exception(f"{bcolors.FAIL}Invalid obstacles input type{bcolors.ENDC}")
                         
-                        
-                    
-                
 
         if "dynamic" in self.data_types['obstacles_input_type'] and\
             "relvel" in self.data_types["obstacles_input_type"] and\
             n_obstacles > 0:
             obstacles_input_data[3:6,] = obstacles_input_data[3:6,] - query_agent_curr_vel # Relative positions to the query agent
 
-        others_input_list = []
-        for quad_idx in other_quad_idxs:
-            other_quad_sequence = expand_sequence(others_input_data[:, :, quad_idx], past_horizon)
-            others_input_list.append(other_quad_sequence)
-        others_input = np.stack(others_input_list, axis=-1) # Stack along last dimension
-        processed_data_dict["others_input"] = others_input
+        if self.data_types["others_input_type"] != "none":
+            others_input_list = []
+            other_quad_idxs = [idx for idx in range(n_quadrotors) if idx != query_quad_idx]
+            for quad_idx in other_quad_idxs:
+                other_quad_sequence = expand_sequence(others_input_data[:, :, quad_idx], past_horizon)
+                others_input_list.append(other_quad_sequence)
+            others_input = np.stack(others_input_list, axis=-1) # Stack along last dimension
+            processed_data_dict["others_input"] = others_input
 
         if n_obstacles > 0:
             obstacles_input_list = []
@@ -405,6 +405,10 @@ class DataHandler():
         tfrecord_dataset_list = []
         
         data = loadmat(raw_dataset_path)
+        if len(data['log_quad_state_real'].shape) == 2:
+            data['log_quad_state_real'] = data['log_quad_state_real'][:,:,np.newaxis]
+            data['log_quad_goal'] = data['log_quad_goal'][:,:,np.newaxis]
+        
         n_quadrotors = data['log_quad_state_real'].shape[2]
         
         for quad_idx in range(n_quadrotors):
@@ -482,11 +486,16 @@ class DataHandler():
     def getNObjects(self):
         dataset = os.path.join(self.raw_data_dir, self.datasets_training[0] + '.mat')
         data = loadmat(dataset)
-        n_quadrotors = data['log_quad_state_real'].shape[2]
+        if len(data['log_quad_state_real'].shape) == 2:
+            n_quadrotors = 1
+        else:
+            n_quadrotors = data['log_quad_state_real'].shape[2]
+            
         if 'log_obs_state_est' in data.keys():
             n_obstacles = data['log_obs_state_est'].shape[2]
         else:
             n_obstacles = 0
+            
         return n_quadrotors, n_obstacles
     
     def getScaler(self, feature_range = (-1, 1)):
