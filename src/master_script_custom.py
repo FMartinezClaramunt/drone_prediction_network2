@@ -6,7 +6,7 @@ from shutil import rmtree
 from datetime import datetime
 from utils.data_handler_v3_tfrecord import DataHandler
 from utils.plot_utils_v3 import plot_predictions
-from utils.model_utils import parse_args, model_selector, combine_args, save_model_summary, save_fde_summary, save_full_model_summary
+from utils.model_utils import parse_args, model_selector, combine_args, save_model_summary, save_fde_summary, save_full_model_summary, get_paths
 
 import pickle as pkl
 from tqdm import trange
@@ -41,8 +41,18 @@ trained_models_dir = os.path.join(root_dir, "trained_models", "")
 model_name = "varyingNQuadsRNN_v2"
 # model_name = "staticEllipsoidObstaclesRNN" # Same as dynamic, only the name changes
 # model_name = "dynamicEllipsoidObstaclesRNN"
-model_number = 12
+# model_name = "onlyEllipsoidObstaclesRNN"
+model_number = 17
 
+TRANSFER_LEARNING_OTHERS = False
+learning_rate_others_encoder = 0 # TODO: Set up an option to optimize the weigths of the others encoder even when using transfer learning
+model_name_others_encoder = "varyingNQuadsRNN_v2"
+model_number_others_encoder = 17
+
+TRANSFER_LEARNING_OBSTACLES = False
+learning_rate_obstacles_encoder = 0 # TODO: Set up an option to optimize the weigths of the obstacles encoder even when using transfer learning
+model_name_obstacles_encoder = "onlyEllipsoidObstaclesRNN"
+model_number_obstacles_encoder = 15
 
 #### Script options ####
 TRAIN = True
@@ -67,26 +77,31 @@ PLOT_ELLIPSOIDS = False
 # datasets_validation = "goalSequence5"
 # datasets_test = "goalSequence8"
 
-# datasets_training = "dynamic16quads1\
-#                     dynamic16quadsPosExchange"
-# datasets_validation = "dynamic16quads2"
-# datasets_test = "goalSequence16quads1"
+datasets_training = "dynamic16quads1\
+                    dynamic16quadsPosExchange"
+datasets_validation = "dynamic16quads2"
+datasets_test = "goalSequence16quads1"
 
 # datasets_training = "staticObs6quad10_1"
 # datasets_validation = "staticObs6quad10_2"
 # datasets_test = "staticObs6quad10_2"
 
-datasets_training = "dynObs10quad10_1"
-datasets_validation = "dynObs10quad10_2"
-datasets_test = "dynObs10quad10_2"
+# datasets_training = "dynObs10quad10_1"
+# datasets_validation = "dynObs10quad10_2"
+# datasets_test = "dynObs10quad10_2"
 
 # datasets_training = "dynObs10quad10_small"
 # datasets_validation = "dynObs10quad10_small"
 # datasets_test = "dynObs10quad10_small"
 
+# datasets_training = "dynObs10quad1_2"
+# datasets_validation = "dynObs10quad1_1"
+# datasets_test = "dynObs10quad1_1"
+
+
 #### Training parameters ####
 MAX_EPOCHS = 15
-MAX_STEPS = 1E5
+MAX_STEPS = 1E6
 TRAIN_PATIENCE = 4 # Number of epochs before early stopping
 BATCH_SIZE = 64 
 
@@ -94,7 +109,7 @@ BATCH_SIZE = 64
 #### Network architecture ####
 # Network types are unused so far
 query_input_type = "vel" # {vel}
-others_input_type = "relpos_relvel" # {relpos_vel, relpos_relvel}
+others_input_type = "relpos_relvel" # {none, relpos_vel, relpos_relvel}
 obstacles_input_type = "none" # {none, static, dynamic, dynamic_radii, dynamic_points6} (dynamic options can also use _relvel)
 target_type = "vel" # {vel}
 
@@ -104,6 +119,10 @@ prediction_horizon = 15
 test_prediction_horizons = "5 10 15 20"
 separate_goals = True # To make sure that training trajectories keep goal position constant
 separate_obstacles = False # Only makes sense if using multiple steps of the obstacle state
+if obstacles_input_type != "none" and others_input_type != "none": # Quadrotors get stuck when there are both obstacles and other quadrotors
+    remove_stuck_quadrotors = True
+else:
+    remove_stuck_quadrotors = False
 
 # Encoder sizes
 size_query_agent_state = 256 # 256
@@ -133,11 +152,7 @@ if args.model_number == -1:
 
 print(f"\n{bcolors.BOLD}{bcolors.HEADER}[%s] Starting master script. Model name: %s, model number: %d{bcolors.ENDC}" % (datetime.now().strftime("%d-%m-%y %H:%M:%S"), args.model_name, args.model_number))
 
-model_dir = os.path.join(trained_models_dir, args.model_name, str(args.model_number), "")
-parameters_path = os.path.join(model_dir, "model_parameters.pkl")
-checkpoint_path = os.path.join(model_dir, "model_checkpoint.h5")
-recording_dir = os.path.join(model_dir, "Recordings", "")
-Path(model_dir).mkdir(parents=True, exist_ok=True)
+parameters_path, checkpoint_path, recording_dir = get_paths(trained_models_dir, args)
 
 # Load model parameters if warmstarting the model or if we are testing it
 if args.warmstart or not args.train:
@@ -157,8 +172,6 @@ else:
 
 #### Define data object, construct model, and load model weights if necessary ####
 data = DataHandler(args)
-# tfdataset_training = data.getTrainingDataset()
-# tfdataset_validation = data.getValidationDataset()
 
 model = model_selector(args)
 train_time = 0
@@ -168,13 +181,68 @@ test_loss = float('inf')
 termination_type = "None"
 
 # Load weights if warmstarting the model or if we are testing it
-# if args.warmstart or not args.train: # TODO: check that this works
-if args.warmstart: # TODO: check that this works
-    print(f"\n{bcolors.OKGREEN}[%s] Loading model %s, model number %d{bcolors.ENDC}\n" % (datetime.now().strftime("%d-%m-%y %H:%M:%S"), args.model_name, args.model_number))
+if args.warmstart or args.transfer_learning_others or args.transfer_learning_obstacles: # TODO: check that this works
     sample_input_batch = data.getSampleInputBatch()
     model.call(sample_input_batch)
-    model.load_weights(checkpoint_path)
+    
+    if args.warmstart:
+        print(f"\n{bcolors.OKGREEN}[%s] Loading model %s, model number %d{bcolors.ENDC}\n" % (datetime.now().strftime("%d-%m-%y %H:%M:%S"), args.model_name, args.model_number))
+        
+        model.load_weights(checkpoint_path)
 
+
+    if args.transfer_learning_others:
+        print(f"\n{bcolors.OKGREEN}[%s] Other agents encoder transfer learning from model %s, model number %d{bcolors.ENDC}\n" % (datetime.now().strftime("%d-%m-%y %H:%M:%S"), args.model_name_others_encoder, args.model_number_others_encoder))
+        
+        args_others = deepcopy(args)
+        args_others.model_name = args.model_name_others_encoder
+        args_others.model_number = args.model_number_others_encoder
+        parameters_path_others, checkpoint_path_others, _ = get_paths(trained_models_dir, args_others)
+
+        stored_args = pkl.load( open( parameters_path_others, "rb" ) )
+        assert args_others.past_horizon == stored_args.past_horizon and \
+            args_others.size_obstacles_fc_layer == stored_args.size_obstacles_fc_layer and \
+            args_others.size_obstacles_bilstm == stored_args.size_obstacles_bilstm and\
+            args_others.others_input_type == stored_args.others_input_type,\
+            "Arguments for transfer learning of the other agents encoder are not valid for the selected trained model"
+
+        model_others = model_selector(args_others)
+        model_others.call(sample_input_batch)
+        model_others.load_weights(checkpoint_path_others)
+
+        for idx in range(len(model_others.other_quads_encoder._layers)):
+            extracted_weights = model_others.other_quads_encoder._layers[idx].get_weights()
+            model.other_quads_encoder._layers[idx].set_weights(extracted_weights)
+
+        model.other_quads_encoder.trainable = False
+
+
+    if args.transfer_learning_obstacles:
+        print(f"\n{bcolors.OKGREEN}[%s] Obstacles encoder transfer learning from model %s, model number %d{bcolors.ENDC}\n" % (datetime.now().strftime("%d-%m-%y %H:%M:%S"), args.model_name_obstacles_encoder, args.model_number_obstacles_encoder))
+
+        args_obstacles = deepcopy(args)
+        args_obstacles.model_name = args.model_name_obstacles_encoder
+        args_obstacles.model_number = args.model_number_obstacles_encoder
+        parameters_path_obstacles, checkpoint_path_obstacles, _ = get_paths(trained_models_dir, args_obstacles)
+
+        stored_args = pkl.load( open( parameters_path_obstacles, "rb" ) )
+        # assert args_obstacles == combine_args(args_obstacles, stored_args), \
+        assert args_obstacles.past_horizon == stored_args.past_horizon and \
+            args_obstacles.size_obstacles_fc_layer == stored_args.size_obstacles_fc_layer and \
+            args_obstacles.size_obstacles_bilstm == stored_args.size_obstacles_bilstm and\
+            args_obstacles.obstacles_input_type == stored_args.obstacles_input_type, \
+            "Arguments for transfer learning of the obstacles encoder are not valid for the selected trained model"
+
+        model_obstacles = model_selector(args_obstacles)
+        model_obstacles.call(sample_input_batch)
+        model_obstacles.load_weights(checkpoint_path_obstacles)
+            
+        for idx in range(len(model_obstacles.obs_encoder._layers)):
+            extracted_weights = model_obstacles.obs_encoder._layers[idx].get_weights()
+            model.obs_encoder._layers[idx].set_weights(extracted_weights)
+
+        model.obs_encoder.trainable = False
+    
 
 #### Training loop ####
 if args.train:    

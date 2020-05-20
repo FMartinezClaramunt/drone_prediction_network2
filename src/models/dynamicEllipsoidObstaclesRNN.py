@@ -1,5 +1,5 @@
 """
-varyingNQuadsRNN version compatible with the new argument parser
+Trajectory prediction neural network that considers an arbitrary number of quadrotors and constant-speed ellipsoidal obstacles 
 """
 
 import tensorflow as tf
