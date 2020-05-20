@@ -12,6 +12,8 @@ from scipy.io import loadmat, savemat
 from scipy.linalg import hankel
 from utils.model_utils import parse_dataset_names, parse_input_types
 
+WORKSPACE_LIMITS = np.array([5, 5, 2.4])
+
 class bcolors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -35,7 +37,8 @@ class DataHandler():
             self.test_prediction_horizon_list.append(int(prediction_horizon))
         self.separate_goals = args.separate_goals
         self.separate_obstacles = args.separate_obstacles
-
+        self.remove_stuck_quadrotors = args.remove_stuck_quadrotors
+        
         # For model evaluation
         self.model_name = args.model_name
         self.model_number = args.model_number
@@ -350,7 +353,14 @@ class DataHandler():
             others_input_list = []
             other_quad_idxs = [idx for idx in range(n_quadrotors) if idx != query_quad_idx]
             for quad_idx in other_quad_idxs:
-                other_quad_sequence = expand_sequence(others_input_data[:, :, quad_idx], past_horizon)
+                stuck_quadrotor_step = None
+                if self.remove_stuck_quadrotors: 
+                    # Quadrotor gets stuck when it gets out of the workspace limits. We leave a 20% margin because sometimes it might go slightly out of limits
+                    stuck_quadrotor_step = np.argmax(np.any(np.abs(state_array[0:3, :, quad_idx]) > 1.2*WORKSPACE_LIMITS[:,np.newaxis], axis = 0))
+                    if stuck_quadrotor_step == 0:
+                        stuck_quadrotor_step = None
+                
+                other_quad_sequence = expand_sequence(others_input_data[:, 0:stuck_quadrotor_step, quad_idx], past_horizon)
                 others_input_list.append(other_quad_sequence)
             others_input = np.stack(others_input_list, axis=-1) # Stack along last dimension
             processed_data_dict["others_input"] = others_input

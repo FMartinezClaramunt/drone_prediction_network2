@@ -38,18 +38,18 @@ trained_models_dir = os.path.join(root_dir, "trained_models", "")
 
 
 #### Model selection ####
-# model_name = "varyingNQuadsRNN_v2"
+model_name = "varyingNQuadsRNN_v2"
 # model_name = "staticEllipsoidObstaclesRNN" # Same as dynamic, only the name changes
-model_name = "dynamicEllipsoidObstaclesRNN"
+# model_name = "dynamicEllipsoidObstaclesRNN"
 # model_name = "onlyEllipsoidObstaclesRNN"
-model_number = 0
+model_number = 17
 
-TRANSFER_LEARNING_OTHERS = True
+TRANSFER_LEARNING_OTHERS = False
 learning_rate_others_encoder = 0 # TODO: Set up an option to optimize the weigths of the others encoder even when using transfer learning
 model_name_others_encoder = "varyingNQuadsRNN_v2"
-model_number_others_encoder = 12
+model_number_others_encoder = 17
 
-TRANSFER_LEARNING_OBSTACLES = True
+TRANSFER_LEARNING_OBSTACLES = False
 learning_rate_obstacles_encoder = 0 # TODO: Set up an option to optimize the weigths of the obstacles encoder even when using transfer learning
 model_name_obstacles_encoder = "onlyEllipsoidObstaclesRNN"
 model_number_obstacles_encoder = 15
@@ -77,18 +77,18 @@ PLOT_ELLIPSOIDS = False
 # datasets_validation = "goalSequence5"
 # datasets_test = "goalSequence8"
 
-# datasets_training = "dynamic16quads1\
-#                     dynamic16quadsPosExchange"
-# datasets_validation = "dynamic16quads2"
-# datasets_test = "goalSequence16quads1"
+datasets_training = "dynamic16quads1\
+                    dynamic16quadsPosExchange"
+datasets_validation = "dynamic16quads2"
+datasets_test = "goalSequence16quads1"
 
 # datasets_training = "staticObs6quad10_1"
 # datasets_validation = "staticObs6quad10_2"
 # datasets_test = "staticObs6quad10_2"
 
-datasets_training = "dynObs10quad10_1"
-datasets_validation = "dynObs10quad10_2"
-datasets_test = "dynObs10quad10_2"
+# datasets_training = "dynObs10quad10_1"
+# datasets_validation = "dynObs10quad10_2"
+# datasets_test = "dynObs10quad10_2"
 
 # datasets_training = "dynObs10quad10_small"
 # datasets_validation = "dynObs10quad10_small"
@@ -101,7 +101,7 @@ datasets_test = "dynObs10quad10_2"
 
 #### Training parameters ####
 MAX_EPOCHS = 15
-MAX_STEPS = 1E5
+MAX_STEPS = 1E6
 TRAIN_PATIENCE = 4 # Number of epochs before early stopping
 BATCH_SIZE = 64 
 
@@ -110,7 +110,7 @@ BATCH_SIZE = 64
 # Network types are unused so far
 query_input_type = "vel" # {vel}
 others_input_type = "relpos_relvel" # {none, relpos_vel, relpos_relvel}
-obstacles_input_type = "dynamic" # {none, static, dynamic, dynamic_radii, dynamic_points6} (dynamic options can also use _relvel)
+obstacles_input_type = "none" # {none, static, dynamic, dynamic_radii, dynamic_points6} (dynamic options can also use _relvel)
 target_type = "vel" # {vel}
 
 past_horizon = 10
@@ -119,6 +119,10 @@ prediction_horizon = 15
 test_prediction_horizons = "5 10 15 20"
 separate_goals = True # To make sure that training trajectories keep goal position constant
 separate_obstacles = False # Only makes sense if using multiple steps of the obstacle state
+if obstacles_input_type != "none" and others_input_type != "none": # Quadrotors get stuck when there are both obstacles and other quadrotors
+    remove_stuck_quadrotors = True
+else:
+    remove_stuck_quadrotors = False
 
 # Encoder sizes
 size_query_agent_state = 256 # 256

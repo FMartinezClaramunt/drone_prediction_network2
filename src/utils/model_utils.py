@@ -11,6 +11,7 @@ def parse_args(defaults):
     #### Model selection ####
     parser.add_argument('--model_name', type=str, default=defaults['model_name'])
     parser.add_argument('--model_number', type=int, default=defaults['model_number'])
+    # parser.add_argument(['-m', '--message'], type=str, default="") # TODO: This raises an error, fix it. Maybe it should be a space instead of an empty string.
     
     parser.add_argument('--transfer_learning_others', type=str2bool, default=defaults['TRANSFER_LEARNING_OTHERS'])
     parser.add_argument('--learning_rate_others_encoder', type=float, default=defaults['learning_rate_others_encoder'])
@@ -60,6 +61,7 @@ def parse_args(defaults):
     parser.add_argument('--test_prediction_horizons', type=str, default=defaults['test_prediction_horizons'])
     parser.add_argument('--separate_goals', type=str2bool, default=defaults['separate_goals'])
     parser.add_argument('--separate_obstacles', type=str2bool, default=defaults['separate_obstacles'])
+    parser.add_argument('--remove_stuck_quadrotors', type=str2bool, default=defaults['remove_stuck_quadrotors'])
     
     # Encoder sizes
     parser.add_argument('--size_query_agent_state', help="Size of the query agent dynamics encoder", type=int, default=defaults['size_query_agent_state'])
@@ -100,6 +102,10 @@ def model_selector(args):
         from models.dynamicEllipsoidObstaclesRNN import FullModel
     elif args.model_name == "onlyEllipsoidObstaclesRNN":
         from models.onlyEllipsoidObstaclesRNN import FullModel
+    elif args.model_name == "dynamicEllipsoidObstaclesRNN_commonInput":
+        from models.dynamicEllipsoidObstaclesRNN_commonInput import FullModel
+    elif args.model_name == "dynamicEllipsoidObstaclesRNN_subInputs":
+        from models.dynamicEllipsoidObstaclesRNN_subInputs import FullModel
     else:
         raise Exception("Unrecognised model name")
 
@@ -112,7 +118,6 @@ def combine_args(parsed_args, stored_args):
     # Combine parsed and stored args in order to ensure the correct network architecture
     new_args = deepcopy(parsed_args)
     
-    # new_args.input_types = stored_args.input_types
     new_args.query_input_type = stored_args.query_input_type
     new_args.others_input_type = stored_args.others_input_type
     new_args.obstacles_input_type = stored_args.obstacles_input_type
@@ -120,6 +125,10 @@ def combine_args(parsed_args, stored_args):
     
     new_args.past_horizon = stored_args.past_horizon
     # new_args.prediction_horizon = stored_args.prediction_horizon
+
+    new_args.separate_goals = stored_args.separate_goals
+    new_args.separate_obstacles = stored_args.separate_obstacles
+    new_args.remove_stuck_quadrotors = stored_args.remove_stuck_quadrotors
 
     # Encoder sizes
     new_args.size_query_agent_state = stored_args.size_query_agent_state
