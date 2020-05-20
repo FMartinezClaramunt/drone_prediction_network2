@@ -432,6 +432,7 @@ def save_full_model_summary(args, last_train_loss, train_loss, val_loss, test_lo
     with open(summary_file, 'r') as in_file:
         reader = csv.reader(in_file)
         lines = list(reader)
+        # lines = list(filter(None, list(reader))) # To remove empty lines which appear in Windows
         if len(lines) == 1:
             lines.append(new_row)
         else:
@@ -454,7 +455,7 @@ def save_full_model_summary(args, last_train_loss, train_loss, val_loss, test_lo
             elif not rewrite:
                 lines.insert(new_idx, new_row)
     
-    with open(summary_file, 'w') as out_file:
+    with open(summary_file, 'w', newline='') as out_file:
         writer = csv.writer(out_file)
         writer.writerows(lines)
 
