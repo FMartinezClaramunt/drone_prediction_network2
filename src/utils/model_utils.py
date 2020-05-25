@@ -2,6 +2,7 @@ import sys, os, argparse, csv
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path
+import importlib
 
 # sys.path.append("../") # This line is needed if we want to import modules using "src." at the beginning
 
@@ -106,8 +107,14 @@ def model_selector(args):
         from models.dynamicEllipsoidObstaclesRNN_commonInput import FullModel
     elif args.model_name == "dynamicEllipsoidObstaclesRNN_subInputs":
         from models.dynamicEllipsoidObstaclesRNN_subInputs import FullModel
+    elif args.model_name == "onlyEllipsoidObstaclesRNN_RBF":
+        from models.onlyEllipsoidObstaclesRNN_RBF import FullModel
     else:
-        raise Exception("Unrecognised model name")
+        try:
+            module = importlib.import_module("models." + args.model_name)
+            FullModel = module.FullModel
+        except:
+            raise Exception("Unrecognised model name")
 
     model = FullModel(args)
     model.compile(loss=model.loss_object, optimizer=model.optimizer)
@@ -445,6 +452,154 @@ def save_full_model_summary(args, last_train_loss, train_loss, val_loss, test_lo
                 "Size obstacles biLSTM",
                 "Size decoder LSTM",
                 "Size fc layer",
+                "Training time (sec)",
+                "Date"
+            ]
+            
+            writer = csv.writer(new_file)
+            writer.writerow(first_row)
+
+    
+    with open(summary_file, 'r') as in_file:
+        reader = csv.reader(in_file)
+        lines = list(reader)
+        # lines = list(filter(None, list(reader))) # To remove empty lines which appear in Windows
+        if len(lines) == 1:
+            lines.append(new_row)
+        else:
+            rewrite = False
+            new_model = True
+            for idx in range(len(lines)):
+                if lines[idx][0] == new_row[0]: # If there are already models with the same name
+                    if new_model == True:
+                        new_idx = idx
+                        new_model = False
+
+                    if lines[idx][1] == new_row[1]: # If experiment number is the same, substitute data
+                        lines[idx] = new_row
+                        rewrite = True
+                    elif int(lines[idx][1]) < new_row[1]: # Else store the idx of the last data entry with an experiment number lower than the one of the new data
+                        new_idx = idx+1
+
+            if new_model:
+                lines.append(new_row)
+            elif not rewrite:
+                lines.insert(new_idx, new_row)
+    
+    with open(summary_file, 'w', newline='') as out_file:
+        writer = csv.writer(out_file)
+        writer.writerows(lines)
+
+
+def save_full_model_summary_v2(args, last_train_loss, train_loss, val_loss, test_loss, termination_type, train_time, fde_list):
+    """
+    [UNUSED FOR NOW]
+    Store model summary.
+    Variation to also include transfer learning parameters.
+    """
+    summary_file = "trained_models_summary_v3.csv"
+    
+    new_row = [
+        args.model_name,
+        args.model_number,
+        args.past_horizon,
+        args.prediction_horizon,
+        args.test_prediction_horizons,
+        last_train_loss,
+        train_loss,
+        val_loss,
+        test_loss,
+        fde_list[0]["position"],
+        fde_list[1]["position"],
+        fde_list[2]["position"],
+        fde_list[3]["position"],
+        fde_list[0]["velocity"],
+        fde_list[1]["velocity"],
+        fde_list[2]["velocity"],
+        fde_list[3]["velocity"],
+        args.query_input_type,
+        args.others_input_type,
+        args.obstacles_input_type,
+        args.target_type,
+        args.max_epochs,
+        args.max_steps,
+        args.train_patience,
+        args.batch_size,
+        termination_type,
+        args.datasets_training,
+        args.datasets_validation,
+        args.datasets_testing,
+        args.separate_goals,
+        args.separate_obstacles,
+        args.size_query_agent_state,
+        args.size_other_agents_state,
+        args.size_other_agents_bilstm,
+        args.size_obstacles_fc_layer,
+        args.size_obstacles_bilstm,
+        args.size_decoder_lstm,
+        args.size_fc_layer,
+        args.transfer_learning_others,
+        args.model_name_others_encoder,
+        args.model_number_others_encoder,
+        args.transfer_learning_obstacles,
+        args.model_name_obstacles_encoder,
+        args.model_number_obstacles_encoder,
+        train_time,
+        datetime.now().strftime("%d/%m/%Y %H:%M") 
+    ]
+    
+    prediction_horizons = []
+    for prediction_horizon in args.test_prediction_horizons.split(" "):
+        prediction_horizons.append(int(prediction_horizon))
+    
+    # If the file does not exist already, create first row
+    if not os.path.isfile(summary_file):
+        with open(summary_file, 'w') as new_file:
+            first_row = [
+                "Model name", 
+                "Model number",
+                "Past horizon",
+                "Prediction horizon",
+                "Test prediction horizons",
+                "Lowest training loss",
+                "Saved model training loss",
+                "Validation loss",
+                "Test loss",
+                f"FDE@%d steps (pos)" % prediction_horizons[0],
+                f"FDE@%d steps (pos)" % prediction_horizons[1],
+                f"FDE@%d steps (pos)" % prediction_horizons[2],
+                f"FDE@%d steps (pos)" % prediction_horizons[3],
+                f"FDE@%d steps (vel)" % prediction_horizons[0],
+                f"FDE@%d steps (vel)" % prediction_horizons[1],
+                f"FDE@%d steps (vel)" % prediction_horizons[2],
+                f"FDE@%d steps (vel)" % prediction_horizons[3],
+                "Query input type",
+                "Others input type",
+                "Obstacle input type",
+                "Target type",
+                "Max epochs",
+                "Max steps",
+                "Train patience",
+                "Batch size",
+                "Termination",
+                "Training datasets",
+                "Validation datasets",
+                "Test datasets",
+                "Separate goals",
+                "Separate obstacles",
+                "Size query agent state",
+                "Size other agents state",
+                "Size other agents biLSTM",
+                "Size obstacles FC layer",
+                "Size obstacles biLSTM",
+                "Size decoder LSTM",
+                "Size fc layer",
+                "Trasfer learning others encoder",
+                "Others encoder model name",
+                "Others encoder model number",
+                "Trasfer learning obstacles encoder",
+                "Obstacles encoder model name",
+                "Obstacles encoder model number",
                 "Training time (sec)",
                 "Date"
             ]

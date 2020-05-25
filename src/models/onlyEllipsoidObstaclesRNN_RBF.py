@@ -1,52 +1,37 @@
 """
-Trajectory prediction neural network that considers an arbitrary number of quadrotors and constant-speed ellipsoidal obstacles 
-Stacks dynamic obstacles and quadrotors together before they get processed by the bidirectional layer which learns their influence on the query robot.
+Trajectory prediction neural network that considers only the query robot and other ellipsoidal obstacles (no other agents)
+Inherits from dynamicEllipsoidOnstaclesRNN
+Uses Radial Basis Function
 """
 
 import tensorflow as tf
-from models.dynamicEllipsoidObstaclesRNN import StateEncoder, DynamicObstaclesEncoder, Decoder
+from models.dynamicEllipsoidObstaclesRNN import StateEncoder, Decoder
+from external.rbflayer import RBFLayer, InitCentersRandom
 tfk = tf.keras
 tfkm = tf.keras.models
 tfkl = tf.keras.layers
 
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
 
-class CommonEncoder(tfkl.Layer):
-    def __init__(self, args):
+class DynamicObstaclesEncoder(tfkl.Layer):
+    def __init__(self, fc_units = 64, rnn_state_size_bilstm = 64, lambda_ = 0.01):
         super().__init__()
         
-        if args.size_obstacles_fc_layer != args.size_other_agents_state:
-            args.size_obstacles_fc_layer = args.size_other_agents_state
-            print(f"{bcolors.FAIL}Size of the obstacles dense layer and the other quadrotors encoder should be the same. Enforcing size_obstacles_fc_layer=size_other_agents_state.{bcolors.ENDC}")
-        
-        self.lambda_ = 0.01
-        self.rnn_state_size_lstm_other_quads = args.size_other_agents_state
-        self.fc_state_size_obstacles = args.size_obstacles_fc_layer
-        self.rnn_state_size_bilstm = args.size_obstacles_bilstm
-        
-        self.lstm_other_quads = tfkl.LSTM(self.rnn_state_size_lstm_other_quads, name = 'lstm_other_quads', return_sequences = False, kernel_regularizer=tfk.regularizers.l2(l=self.lambda_))
-        self.fc_obs = tfkl.Dense(self.fc_state_size_obstacles, activation = 'relu')
+        self.lambda_ = lambda_
+        # self.rnn_state_size_lstm_obs = 256
+        self.fc_units = fc_units
+        self.rnn_state_size_bilstm = rnn_state_size_bilstm
+        self.concat = tfkl.Concatenate()
+        self.fc_obs = tfkl.Dense(self.fc_units//2, activation = 'relu')
+        self.rbf_obs = RBFLayer(self.fc_units//2)
         self.bilstm = tfkl.Bidirectional(tfkl.LSTM(self.rnn_state_size_bilstm,  name = 'bilstm_obs', return_sequences = False, return_state = False, kernel_regularizer=tfk.regularizers.l2(l=self.lambda_)), merge_mode = 'ave') # Average of forward and backward LSTMs
-        
-        
-    def call(self, x):        
-        processed_objects = []
-        
-        for quad_idx in range(x["others_input"].shape[-1]):
-            processed_objects.append(self.lstm_other_quads(x["others_input"][:, :, :, quad_idx]))
-        
-        for obs_idx in range(x["obstacles_input"].shape[-1]):
-            processed_objects.append(self.fc_obs(x["obstacles_input"][:, :, obs_idx]))
-        
-        stacked_obs = tf.stack(processed_objects, axis = 1)
+
+    def call(self, x):
+        obs = []
+        for obs_idx in range(x.shape[-1]):
+            concat = self.concat([self.fc_obs(x[:, 0:3, obs_idx]),\
+                self.rbf_obs(x[:, 3:, obs_idx])])
+            obs.append(concat)
+        stacked_obs = tf.stack(obs, axis = 1)
         out = self.bilstm(stacked_obs)
         return out
 
@@ -75,14 +60,14 @@ class FullModel(tfk.Model):
         
         # Define architecture
         self.state_encoder = StateEncoder(rnn_state_size = args.size_query_agent_state)
-        self.common_encoder = CommonEncoder(args)
+        self.obs_encoder = DynamicObstaclesEncoder(fc_units=args.size_obstacles_fc_layer, rnn_state_size_bilstm=args.size_obstacles_bilstm)
         self.concat = tfkl.Concatenate()
         self.repeat = tfkl.RepeatVector(self.prediction_horizon)
         self.decoder = Decoder(rnn_state_size_lstm_concat = args.size_decoder_lstm, fc_hidden_unit_size = args.size_fc_layer)
                 
     def call(self, x):
         x1 = self.state_encoder(x["query_input"])
-        x2 = self.common_encoder( x )
+        x2 = self.obs_encoder( x["obstacles_input"] )
         concat = self.concat([x1, x2])
         repeated = self.repeat(concat)
         out = self.decoder(repeated)
@@ -95,11 +80,13 @@ class FullModel(tfk.Model):
             loss = self.loss_object(x["target"], predictions)
         gradients = tape.gradient(loss, self.trainable_variables)
         self.optimizer.apply_gradients(zip(gradients, self.trainable_variables))
+
         self.train_loss.update_state(x["target"], predictions)
 
     @tf.function
     def val_step(self, x):
         predictions = self(x)
+        # v_loss = self.loss_object(x["target"], predictions)
         self.val_loss.update_state(x["target"], predictions)
     
     @tf.function
@@ -125,3 +112,8 @@ class FullModel(tfk.Model):
 
             self.position_L2_errors[idx].update_state(new_target_position, new_predicted_position)
             self.velocity_L2_errors[idx].update_state(x["target"][:,prediction_horizon-1,:], predictions[:, prediction_horizon-1, :])
+        
+        
+
+
+

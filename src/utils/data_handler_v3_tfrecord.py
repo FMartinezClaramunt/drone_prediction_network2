@@ -155,7 +155,7 @@ class DataHandler():
         n_quadrotors = goal_array.shape[2]
 
         # Find last time step which can be used for training
-        final_timestep = find_last_usable_step(goal_array, logsize, n_quadrotors)
+        final_timestep = find_last_usable_step(goal_array, logsize)
 
         trajs = np.swapaxes(state_array[0:3, 0:final_timestep, :], 0, 1)
         goals = np.swapaxes(goal_array[0:3, 0:final_timestep, :], 0, 1)
@@ -179,7 +179,7 @@ class DataHandler():
             quads_to_plot = [quads_to_plot]
 
         for quad_idx in quads_to_plot:
-            data_dict = self.preprocess_data(data, quad_idx, params=params, relative=True)
+            data_dict = self.preprocess_data(data, quad_idx, params=params, relative=True, remove_stuck_quadrotors = False)
             scaled_data_dict = self.scaler.transform(data_dict)
             scaled_velocity_predictions = trained_model.predict(scaled_data_dict)
             scaled_data_dict["target"] = scaled_velocity_predictions
@@ -228,9 +228,12 @@ class DataHandler():
             
         savemat(filename, data_to_save)
     
-    def preprocess_data(self, data_, query_quad_idx, relative = True, params=None):
+    def preprocess_data(self, data_, query_quad_idx, relative = True, params=None, remove_stuck_quadrotors=None):
         if params is None:
             params = self.common_params
+        
+        if remove_stuck_quadrotors is None:
+            remove_stuck_quadrotors = self.remove_stuck_quadrotors
         
         past_horizon = params["past_horizon"]
         prediction_horizon = params["prediction_horizon"]
@@ -263,16 +266,23 @@ class DataHandler():
         n_quadrotors = goal_array.shape[2]
         
         # Find last time step which can be used for training
-        final_timestep = find_last_usable_step(goal_array, logsize, n_quadrotors)
+        final_timestep = find_last_usable_step(goal_array, logsize)
+        
+        if remove_stuck_quadrotors: 
+            stuck_quadrotor_step = np.argmax(np.any(np.abs(state_array[0:3, :, :]) > 1.2*WORKSPACE_LIMITS[:,np.newaxis,np.newaxis], axis = (0,2)))
+            if stuck_quadrotor_step > 0:
+                final_timestep = min(final_timestep, stuck_quadrotor_step)
+        
+        assert final_timestep > prediction_horizon + past_horizon - 1
+        
         past_timesteps_idxs = [idx for idx in range(0, final_timestep - prediction_horizon)]
         future_timesteps_idxs = [idx for idx in range(past_horizon, final_timestep)]
-                
+        
         # Add first element of the list of inputs, which corresponds to the query agent's data
         query_input_data = state_array[3:6,\
                                     past_timesteps_idxs,\
                                     query_quad_idx]
-        query_input = expand_sequence(query_input_data, past_horizon)
-        processed_data_dict["query_input"] = query_input
+        processed_data_dict["query_input"] = expand_sequence(query_input_data, past_horizon)
         
         # Add second element to the list of inputs, which is the list of other agent's data
         others_input_data = state_array[0:6,\
@@ -349,30 +359,28 @@ class DataHandler():
             n_obstacles > 0:
             obstacles_input_data[3:6,] = obstacles_input_data[3:6,] - query_agent_curr_vel # Relative positions to the query agent
 
+        stuck_quadrotor_step = np.zeros(n_quadrotors-1)
+        counter = 0
         if self.data_types["others_input_type"] != "none":
             others_input_list = []
             other_quad_idxs = [idx for idx in range(n_quadrotors) if idx != query_quad_idx]
             for quad_idx in other_quad_idxs:
-                stuck_quadrotor_step = None
-                if self.remove_stuck_quadrotors: 
-                    # Quadrotor gets stuck when it gets out of the workspace limits. We leave a 20% margin because sometimes it might go slightly out of limits
-                    stuck_quadrotor_step = np.argmax(np.any(np.abs(state_array[0:3, :, quad_idx]) > 1.2*WORKSPACE_LIMITS[:,np.newaxis], axis = 0))
-                    if stuck_quadrotor_step == 0:
-                        stuck_quadrotor_step = None
-                
-                other_quad_sequence = expand_sequence(others_input_data[:, 0:stuck_quadrotor_step, quad_idx], past_horizon)
+                other_quad_sequence = expand_sequence(others_input_data[:, :, quad_idx], past_horizon)
                 others_input_list.append(other_quad_sequence)
-            others_input = np.stack(others_input_list, axis=-1) # Stack along last dimension
-            processed_data_dict["others_input"] = others_input
+                
+            processed_data_dict["others_input"] = np.stack(others_input_list, axis=-1) # Stack along last dimension
 
-        if n_obstacles > 0:
-            obstacles_input_list = []
+        if n_obstacles > 0:            
+            processed_data_dict["obstacles_input"] = np.zeros((obstacles_input_data.shape[1]-past_horizon+1,\
+                                        past_horizon,\
+                                        obstacles_input_data.shape[0],\
+                                        obstacles_input_data.shape[2]))
+            
             for obs_idx in range(obstacles_input_data.shape[2]):
-                obstacle_sequence = expand_sequence(obstacles_input_data[:, :, obs_idx], past_horizon)
-                obstacles_input_list.append(obstacle_sequence)
-            obstacles_input = np.stack(obstacles_input_list, axis=-1) # Stack along last dimension
+                processed_data_dict["obstacles_input"][:,:,:,obs_idx] = expand_sequence(obstacles_input_data[:, :, obs_idx], past_horizon)
+            
             # processed_data_dict["obstacles_input"] = obstacles_input
-            processed_data_dict["obstacles_input"] = obstacles_input[:, -1, :, :] # Only use position at current step
+            processed_data_dict["obstacles_input"] = processed_data_dict["obstacles_input"][:, -1, :, :] # Only use position at current step
 
         # Slice state_array to build target_data
         target_data = state_array[3:6,\
@@ -380,10 +388,10 @@ class DataHandler():
                                 query_quad_idx:query_quad_idx + 1]
 
         # Expand target feature sequences
-        target = expand_sequence(target_data, prediction_horizon)
-        processed_data_dict["target"] = target
+        processed_data_dict["target"] = expand_sequence(target_data, prediction_horizon)
         
-        keep_idxs = [True] * target.shape[0]
+        keep_idxs = [True] * processed_data_dict["target"].shape[0]
+        final_timestep - (past_horizon + prediction_horizon) + 1
         if separate_goals: # Separate trajectories by goals
             goal_data = goal_array[0:3,\
                                     0:final_timestep,\
@@ -583,19 +591,15 @@ class DataHandler():
         return dataset_out
 
 
-def find_last_usable_step(goal_array, logsize, n_quadrotors): 
-    zero_index = [] # Time step at which all goal states are zero (simulation stops)
-    for i in range(100, goal_array.shape[1]): # The 100 is a manual fix, datasets should always be much bigger than this
-        for j in range(n_quadrotors): 
-            if np.array_equiv(goal_array[:,i,j], [0, 0, 0, 0]):
-                zero_index = i
-                break
-            else:
-                zero_index = []
-        if zero_index != []:
-            break
-    if zero_index == []:
-        zero_index = goal_array.shape[1]
+def find_last_usable_step(goal_array, logsize): 
+    intial_ignored_steps = 100
+    zero_index = np.argmax(np.all(goal_array[:, intial_ignored_steps:, :] == 0, axis=(0,2)))
+
+    if zero_index == 0:
+        zero_index = float('inf')
+
+    zero_index += intial_ignored_steps - 1
+
     final_timestep = min(zero_index-1, logsize) # Final time step
     return final_timestep
 
@@ -691,3 +695,10 @@ class scaler():
                 
         return unscaled_data
         
+
+def obstacles_data_to_input(obstacles_input_data, past_horizon):
+    obstacles_input_list = []
+    for obs_idx in range(obstacles_input_data.shape[2]):
+        obstacle_sequence = expand_sequence(obstacles_input_data[:, :, obs_idx], past_horizon)
+        obstacles_input_list.append(obstacle_sequence)
+    return np.stack(obstacles_input_list, axis=-1) # Stack along last dimension

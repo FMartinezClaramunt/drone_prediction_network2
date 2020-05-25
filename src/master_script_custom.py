@@ -38,11 +38,16 @@ trained_models_dir = os.path.join(root_dir, "trained_models", "")
 
 
 #### Model selection ####
-model_name = "varyingNQuadsRNN_v2"
+# model_name = "varyingNQuadsRNN_v2"
 # model_name = "staticEllipsoidObstaclesRNN" # Same as dynamic, only the name changes
 # model_name = "dynamicEllipsoidObstaclesRNN"
+model_name = "dynamicEllipsoidObstaclesRNN_regularization"
+# model_name = "dynamicEllipsoidObstaclesRNN_layerNorm"
+# model_name = "dynamicEllipsoidObstaclesRNN_subInputs"
+# model_name = "dynamicEllipsoidObstaclesRNN_commonInput"
 # model_name = "onlyEllipsoidObstaclesRNN"
-model_number = 17
+# model_name = "onlyEllipsoidObstaclesRNN_RBF"
+model_number = 0
 
 TRANSFER_LEARNING_OTHERS = False
 learning_rate_others_encoder = 0 # TODO: Set up an option to optimize the weigths of the others encoder even when using transfer learning
@@ -52,7 +57,7 @@ model_number_others_encoder = 17
 TRANSFER_LEARNING_OBSTACLES = False
 learning_rate_obstacles_encoder = 0 # TODO: Set up an option to optimize the weigths of the obstacles encoder even when using transfer learning
 model_name_obstacles_encoder = "onlyEllipsoidObstaclesRNN"
-model_number_obstacles_encoder = 15
+model_number_obstacles_encoder = 20
 
 #### Script options ####
 TRAIN = True
@@ -64,7 +69,7 @@ SUMMARY = True # To include a summary of the results of the model in a csv file
 DISPLAY = False
 RECORD = False
 EXPORT_PLOTTING_DATA = False
-N_FRAMES = 1000 # Number of frames to display/record
+N_FRAMES = 500 # Number of frames to display/record
 DT = 0.05 # Used to compute the FPS of the video
 PLOT_GOALS = True # To plot the goals of the quadrotors
 PLOT_ELLIPSOIDS = False
@@ -75,46 +80,52 @@ PLOT_ELLIPSOIDS = False
 #                     goalSequence3\
 #                     goalSequence4"
 # datasets_validation = "goalSequence5"
-# datasets_test = "goalSequence8"
+# datasets_test = datasets_validation
 
-datasets_training = "dynamic16quads1\
-                    dynamic16quadsPosExchange"
-datasets_validation = "dynamic16quads2"
-datasets_test = "goalSequence16quads1"
+# datasets_training = "dynamic16quads1\
+#                     dynamic16quadsPosExchange"
+# datasets_validation = "dynamic16quads2"
+# datasets_test = datasets_validation
 
 # datasets_training = "staticObs6quad10_1"
 # datasets_validation = "staticObs6quad10_2"
-# datasets_test = "staticObs6quad10_2"
+# datasets_test = datasets_validation
 
-# datasets_training = "dynObs10quad10_1"
-# datasets_validation = "dynObs10quad10_2"
-# datasets_test = "dynObs10quad10_2"
+# datasets_training = "dynObs10quad10_1 dynObs10quad10_5 dynObs10quad10_6 dynObs10quad10_bugged dynObs10quad10_2"
+# datasets_validation = "dynObs10quad10_3 dynObs10quad10_4"
+# datasets_test = datasets_validation
+
+datasets_training = "dynObs10quad10_2"
+datasets_validation = "dynObs10quad10_3"
+datasets_test = datasets_validation
 
 # datasets_training = "dynObs10quad10_small"
 # datasets_validation = "dynObs10quad10_small"
-# datasets_test = "dynObs10quad10_small"
+# datasets_test = datasets_validation
 
-# datasets_training = "dynObs10quad1_2"
-# datasets_validation = "dynObs10quad1_1"
-# datasets_test = "dynObs10quad1_1"
+# datasets_training = "dynObs10quad1_1\
+#                     dynObs10quad1_2\
+#                     dynObs10quad1_3"
+# datasets_validation = "dynObs10quad1_4"
+# datasets_test = datasets_validation
 
 
 #### Training parameters ####
-MAX_EPOCHS = 15
+MAX_EPOCHS = 10
 MAX_STEPS = 1E6
-TRAIN_PATIENCE = 4 # Number of epochs before early stopping
-BATCH_SIZE = 64 
+TRAIN_PATIENCE = 3 # Number of epochs before early stopping
+BATCH_SIZE = 256 
 
 
 #### Network architecture ####
 # Network types are unused so far
 query_input_type = "vel" # {vel}
-others_input_type = "relpos_relvel" # {none, relpos_vel, relpos_relvel}
-obstacles_input_type = "none" # {none, static, dynamic, dynamic_radii, dynamic_points6} (dynamic options can also use _relvel)
+others_input_type = "relpos_vel" # {none, relpos_vel, relpos_relvel}
+obstacles_input_type = "dynamic" # {none, static, dynamic, dynamic_radii, dynamic_points6} (dynamic options can also use _relvel)
 target_type = "vel" # {vel}
 
 past_horizon = 10
-prediction_horizon = 15
+prediction_horizon = 10
 # test_prediction_horizons = "none"
 test_prediction_horizons = "5 10 15 20"
 separate_goals = True # To make sure that training trajectories keep goal position constant
@@ -125,16 +136,16 @@ else:
     remove_stuck_quadrotors = False
 
 # Encoder sizes
-size_query_agent_state = 256 # 256
-size_other_agents_state = 256 # 256
-size_other_agents_bilstm = 256 # 256
-size_obstacles_fc_layer = 64 # 256
-size_obstacles_bilstm = 64 # 64
+size_query_agent_state = 64 # 256
+size_other_agents_state = 64 # 256
+size_other_agents_bilstm = 64 # 256
+size_obstacles_fc_layer = 32 # 64
+size_obstacles_bilstm = 32 # 64
 size_action_encoding = 0 # 0
 
 # Decoder sizes
-size_decoder_lstm = 512 # 512
-size_fc_layer = 256 # 256
+size_decoder_lstm = 128 # 512
+size_fc_layer = 64 # 256
 
 
 #### Parse args ####
@@ -161,7 +172,7 @@ if args.warmstart or not args.train:
     args = combine_args(args, stored_args) # To ensure the correct model architecture
 else:
     if os.path.isfile(checkpoint_path):
-        print(f"{bcolors.WARNING}WARNING: Rewriting previously trained model!{bcolors.ENDC}")
+        print(f"{bcolors.FAIL}WARNING: Rewriting previously trained model!{bcolors.ENDC}")
         Path(checkpoint_path).unlink() # Delete checkpoint if we are training a new model with an already existing experiment number to avoid problems if the training loop were to be prematurely stopped
     
     if os.path.isdir(recording_dir): # Delete recordings if we are training a new model with an already existing experiment number

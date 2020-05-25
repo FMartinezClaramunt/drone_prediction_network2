@@ -35,22 +35,55 @@
 # --others_input_type none --obstacles_input_type dynamic_relvel \
 # --datasets_training "dynObs10quad1_1 dynObs10quad1_2 dynObs10quad1_3" --datasets_validation "dynObs10quad1_4" --datasets_testing "dynObs10quad1_4"
 
-python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN --model_number 22 \
+# python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN --model_number 22 \
+# --others_input_type none --obstacles_input_type dynamic_radii \
+# --datasets_training "dynObs10quad1_1 dynObs10quad1_2 dynObs10quad1_3" --datasets_validation "dynObs10quad1_4" --datasets_testing "dynObs10quad1_4"
+
+# python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN --model_number 23 \
+# --others_input_type none --obstacles_input_type dynamic_radii_relvel \
+# --datasets_training "dynObs10quad1_1 dynObs10quad1_2 dynObs10quad1_3" --datasets_validation "dynObs10quad1_4" --datasets_testing "dynObs10quad1_4"
+
+# python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN --model_number 24 \
+# --others_input_type none --obstacles_input_type dynamic_points6 \
+# --datasets_training "dynObs10quad1_1 dynObs10quad1_2 dynObs10quad1_3" --datasets_validation "dynObs10quad1_4" --datasets_testing "dynObs10quad1_4"
+
+# python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN --model_number 25 \
+# --others_input_type none --obstacles_input_type dynamic_points6_relvel \
+# --datasets_training "dynObs10quad1_1 dynObs10quad1_2 dynObs10quad1_3" --datasets_validation "dynObs10quad1_4" --datasets_testing "dynObs10quad1_4"
+
+# python3 src/master_script_custom.py --model_name dynamicEllipsoidObstaclesRNN_subInputs --model_number 26 \
+# --others_input_type relpos_relvel --obstacles_input_type dynamic_relvel \
+# --datasets_training "dynObs10quad10_1 dynObs10quad10_5 dynObs10quad10_6 dynObs10quad10_bugged dynObs10quad10_2" --datasets_validation "dynObs10quad10_3 dynObs10quad10_4" --datasets_testing "dynObs10quad10_3 dynObs10quad10_4"
+
+# python3 src/master_script_custom.py --model_name dynamicEllipsoidObstaclesRNN_commonInput --model_number 27 \
+# --others_input_type relpos_relvel --obstacles_input_type dynamic_relvel \
+# --size_obstacles_fc_layer 256 \
+# --datasets_training "dynObs10quad10_1 dynObs10quad10_5 dynObs10quad10_6 dynObs10quad10_bugged dynObs10quad10_2" --datasets_validation "dynObs10quad10_3 dynObs10quad10_4" --datasets_testing "dynObs10quad10_3 dynObs10quad10_4"
+
+
+python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN_RBF --model_number 29 \
+--others_input_type none --obstacles_input_type dynamic \
+--datasets_training "dynObs10quad1_1 dynObs10quad1_2 dynObs10quad1_3" --datasets_validation "dynObs10quad1_4" --datasets_testing "dynObs10quad1_4"
+
+python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN_RBF --model_number 30 \
+--others_input_type none --obstacles_input_type dynamic_relvel \
+--datasets_training "dynObs10quad1_1 dynObs10quad1_2 dynObs10quad1_3" --datasets_validation "dynObs10quad1_4" --datasets_testing "dynObs10quad1_4"
+
+python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN_RBF --model_number 31 \
 --others_input_type none --obstacles_input_type dynamic_radii \
 --datasets_training "dynObs10quad1_1 dynObs10quad1_2 dynObs10quad1_3" --datasets_validation "dynObs10quad1_4" --datasets_testing "dynObs10quad1_4"
 
-python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN --model_number 23 \
+python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN_RBF --model_number 32 \
 --others_input_type none --obstacles_input_type dynamic_radii_relvel \
 --datasets_training "dynObs10quad1_1 dynObs10quad1_2 dynObs10quad1_3" --datasets_validation "dynObs10quad1_4" --datasets_testing "dynObs10quad1_4"
 
-python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN --model_number 24 \
+python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN_RBF --model_number 33 \
 --others_input_type none --obstacles_input_type dynamic_points6 \
 --datasets_training "dynObs10quad1_1 dynObs10quad1_2 dynObs10quad1_3" --datasets_validation "dynObs10quad1_4" --datasets_testing "dynObs10quad1_4"
 
-python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN --model_number 25 \
+python3 src/master_script_custom.py --model_name onlyEllipsoidObstaclesRNN_RBF --model_number 33 \
 --others_input_type none --obstacles_input_type dynamic_points6_relvel \
 --datasets_training "dynObs10quad1_1 dynObs10quad1_2 dynObs10quad1_3" --datasets_validation "dynObs10quad1_4" --datasets_testing "dynObs10quad1_4"
-
 
 
 notify-send "Script has finished running"
