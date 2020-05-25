@@ -38,10 +38,10 @@ trained_models_dir = os.path.join(root_dir, "trained_models", "")
 
 
 #### Model selection ####
-# model_name = "varyingNQuadsRNN_v2"
+model_name = "varyingNQuadsRNN_v2"
 # model_name = "staticEllipsoidObstaclesRNN" # Same as dynamic, only the name changes
 # model_name = "dynamicEllipsoidObstaclesRNN"
-model_name = "dynamicEllipsoidObstaclesRNN_regularization"
+# model_name = "dynamicEllipsoidObstaclesRNN_regularization"
 # model_name = "dynamicEllipsoidObstaclesRNN_layerNorm"
 # model_name = "dynamicEllipsoidObstaclesRNN_subInputs"
 # model_name = "dynamicEllipsoidObstaclesRNN_commonInput"
@@ -63,13 +63,13 @@ model_number_obstacles_encoder = 20
 TRAIN = True
 WARMSTART = False
 
-SUMMARY = True # To include a summary of the results of the model in a csv file
+SUMMARY = False # To include a summary of the results of the model in a csv file
 
 # To display and/or record an animation of the test dataset with the trajcetory predictions from the model
 DISPLAY = False
 RECORD = False
 EXPORT_PLOTTING_DATA = False
-N_FRAMES = 500 # Number of frames to display/record
+N_FRAMES = 2000 # Number of frames to display/record
 DT = 0.05 # Used to compute the FPS of the video
 PLOT_GOALS = True # To plot the goals of the quadrotors
 PLOT_ELLIPSOIDS = False
@@ -91,13 +91,13 @@ PLOT_ELLIPSOIDS = False
 # datasets_validation = "staticObs6quad10_2"
 # datasets_test = datasets_validation
 
-# datasets_training = "dynObs10quad10_1 dynObs10quad10_5 dynObs10quad10_6 dynObs10quad10_bugged dynObs10quad10_2"
-# datasets_validation = "dynObs10quad10_3 dynObs10quad10_4"
-# datasets_test = datasets_validation
-
-datasets_training = "dynObs10quad10_2"
-datasets_validation = "dynObs10quad10_3"
+datasets_training = "dynObs10quad10_1 dynObs10quad10_5 dynObs10quad10_6 dynObs10quad10_bugged dynObs10quad10_2"
+datasets_validation = "dynObs10quad10_3 dynObs10quad10_4"
 datasets_test = datasets_validation
+
+# datasets_training = "dynObs10quad10_2"
+# datasets_validation = "dynObs10quad10_3"
+# datasets_test = datasets_validation
 
 # datasets_training = "dynObs10quad10_small"
 # datasets_validation = "dynObs10quad10_small"
@@ -111,9 +111,9 @@ datasets_test = datasets_validation
 
 
 #### Training parameters ####
-MAX_EPOCHS = 10
+MAX_EPOCHS = 15
 MAX_STEPS = 1E6
-TRAIN_PATIENCE = 3 # Number of epochs before early stopping
+TRAIN_PATIENCE = 4 # Number of epochs before early stopping
 BATCH_SIZE = 256 
 
 

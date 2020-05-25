@@ -4,10 +4,11 @@ Stacks dynamic obstacles and quadrotors together before they get processed by th
 """
 
 import tensorflow as tf
-from models.dynamicEllipsoidObstaclesRNN import StateEncoder, DynamicObstaclesEncoder, Decoder
+from models.dynamicEllipsoidObstaclesRNN_regularization import StateEncoder, Decoder
 tfk = tf.keras
 tfkm = tf.keras.models
 tfkl = tf.keras.layers
+tfkr = tf.keras.regularizers
 
 class bcolors:
     HEADER = '\033[95m'
@@ -27,14 +28,14 @@ class CommonEncoder(tfkl.Layer):
             args.size_obstacles_fc_layer = args.size_other_agents_state
             print(f"{bcolors.FAIL}Size of the obstacles dense layer and the other quadrotors encoder should be the same. Enforcing size_obstacles_fc_layer=size_other_agents_state.{bcolors.ENDC}")
         
-        self.lambda_ = 0.01
+        self.reg_factor = 0.01
         self.rnn_state_size_lstm_other_quads = args.size_other_agents_state
         self.fc_state_size_obstacles = args.size_obstacles_fc_layer
         self.rnn_state_size_bilstm = args.size_obstacles_bilstm
         
-        self.lstm_other_quads = tfkl.LSTM(self.rnn_state_size_lstm_other_quads, name = 'lstm_other_quads', return_sequences = False, kernel_regularizer=tfk.regularizers.l2(l=self.lambda_))
+        self.lstm_other_quads = tfkl.LSTM(self.rnn_state_size_lstm_other_quads, name = 'lstm_other_quads', return_sequences = False, kernel_regularizer = tfkr.l2(self.reg_factor), recurrent_regularizer = tfkr.l2(self.reg_factor), bias_regularizer = tfkr.l2(self.reg_factor), activity_regularizer = tfkr.l2(self.reg_factor))
         self.fc_obs = tfkl.Dense(self.fc_state_size_obstacles, activation = 'relu')
-        self.bilstm = tfkl.Bidirectional(tfkl.LSTM(self.rnn_state_size_bilstm,  name = 'bilstm_obs', return_sequences = False, return_state = False, kernel_regularizer=tfk.regularizers.l2(l=self.lambda_)), merge_mode = 'ave') # Average of forward and backward LSTMs
+        self.bilstm = tfkl.Bidirectional(tfkl.LSTM(self.rnn_state_size_bilstm,  name = 'bilstm_obs', return_sequences = False, return_state = False, kernel_regularizer = tfkr.l2(self.reg_factor), recurrent_regularizer = tfkr.l2(self.reg_factor), bias_regularizer = tfkr.l2(self.reg_factor), activity_regularizer = tfkr.l2(self.reg_factor)), merge_mode = 'ave') # Average of forward and backward LSTMs
         
         
     def call(self, x):        
