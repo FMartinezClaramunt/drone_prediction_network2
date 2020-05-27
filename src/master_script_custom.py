@@ -35,18 +35,22 @@ data_master_dir = os.path.join(root_dir, "data", "")
 raw_data_dir = os.path.join(data_master_dir, "Raw", "")
 tfrecord_data_dir = os.path.join(data_master_dir, "TFRecord", "")
 trained_models_dir = os.path.join(root_dir, "trained_models", "")
-
+summary_file = "trained_models_summary_v3.csv"
 
 #### Model selection ####
-model_name = "varyingNQuadsRNN_v2"
+# model_name = "varyingNQuadsRNN_v2"
 # model_name = "staticEllipsoidObstaclesRNN" # Same as dynamic, only the name changes
 # model_name = "dynamicEllipsoidObstaclesRNN"
 # model_name = "dynamicEllipsoidObstaclesRNN_regularization"
 # model_name = "dynamicEllipsoidObstaclesRNN_layerNorm"
 # model_name = "dynamicEllipsoidObstaclesRNN_subInputs"
 # model_name = "dynamicEllipsoidObstaclesRNN_commonInput"
+# model_name = "dynamicEllipsoidObstaclesRNN_separateStates"
+# model_name = "dynamicEllipsoidObstaclesRNN_customPooling"
+model_name = "dynamicEllipsoidObstaclesRNN_commonInput_customPooling"
 # model_name = "onlyEllipsoidObstaclesRNN"
 # model_name = "onlyEllipsoidObstaclesRNN_RBF"
+
 model_number = 0
 
 TRANSFER_LEARNING_OTHERS = False
@@ -61,9 +65,9 @@ model_number_obstacles_encoder = 20
 
 #### Script options ####
 TRAIN = True
-WARMSTART = False
+WARMSTART = True
 
-SUMMARY = False # To include a summary of the results of the model in a csv file
+SUMMARY = True # To include a summary of the results of the model in a csv file
 
 # To display and/or record an animation of the test dataset with the trajcetory predictions from the model
 DISPLAY = False
@@ -111,17 +115,17 @@ datasets_test = datasets_validation
 
 
 #### Training parameters ####
-MAX_EPOCHS = 15
+MAX_EPOCHS = 20
 MAX_STEPS = 1E6
 TRAIN_PATIENCE = 4 # Number of epochs before early stopping
 BATCH_SIZE = 256 
-
+regularization_factor = 0.01
 
 #### Network architecture ####
-# Network types are unused so far
+# Recommended: vel, relpos_relvel, dynamic_relvel
 query_input_type = "vel" # {vel}
-others_input_type = "relpos_vel" # {none, relpos_vel, relpos_relvel}
-obstacles_input_type = "dynamic" # {none, static, dynamic, dynamic_radii, dynamic_points6} (dynamic options can also use _relvel)
+others_input_type = "relpos_relvel" # {none, relpos_vel, relpos_relvel}
+obstacles_input_type = "dynamic_relvel" # {none, static, dynamic, dynamic_radii, dynamic_points6concat, dynamic_points6stack} (dynamic options can also use _relvel)
 target_type = "vel" # {vel}
 
 past_horizon = 10
@@ -182,9 +186,9 @@ else:
 
 
 #### Define data object, construct model, and load model weights if necessary ####
+model = model_selector(args)
 data = DataHandler(args)
 
-model = model_selector(args)
 train_time = 0
 train_loss = float('inf')
 val_loss = float('inf')

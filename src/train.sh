@@ -86,97 +86,184 @@
 # --datasets_training "dynObs10quad1_1 dynObs10quad1_2 dynObs10quad1_3" --datasets_validation "dynObs10quad1_4" --datasets_testing "dynObs10quad1_4"
 
 
+# # Small nets w/ absolute velocities and dynamic obstacles disregarding obstacles
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_regularization \
+# --model_number 100 \
+# --others_input_type relpos_vel \
+# --obstacles_input_type dynamic \
+# --size_query_agent_state 64 \
+# --size_other_agents_state 64 \
+# --size_other_agents_bilstm 64 \
+# --size_obstacles_fc_layer 32 \
+# --size_obstacles_bilstm 32 \
+# --size_decoder_lstm 128 \
+# --size_fc_layer 64 \
+# --record True
 
-# Small nets w/ absolute velocities and dynamic obstacles disregarding obstacles
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_layerNorm \
+# --model_number 100 \
+# --others_input_type relpos_vel \
+# --obstacles_input_type dynamic \
+# --size_query_agent_state 64 \
+# --size_other_agents_state 64 \
+# --size_other_agents_bilstm 64 \
+# --size_obstacles_fc_layer 32 \
+# --size_obstacles_bilstm 32 \
+# --size_decoder_lstm 128 \
+# --size_fc_layer 64 \
+# --record True
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInput \
+# --model_number 100 \
+# --others_input_type relpos_vel \
+# --obstacles_input_type dynamic \
+# --size_query_agent_state 64 \
+# --size_other_agents_state 64 \
+# --size_other_agents_bilstm 64 \
+# --size_obstacles_fc_layer 32 \
+# --size_obstacles_bilstm 32 \
+# --size_decoder_lstm 128 \
+# --size_fc_layer 64 \
+# --record True
+
+
+# # Small nets w/ absolute velocities and points6 dynamic obstacles
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_regularization \
+# --model_number 101 \
+# --others_input_type relpos_vel \
+# --obstacles_input_type dynamic_points6 \
+# --size_query_agent_state 64 \
+# --size_other_agents_state 64 \
+# --size_other_agents_bilstm 64 \
+# --size_obstacles_fc_layer 32 \
+# --size_obstacles_bilstm 32 \
+# --size_decoder_lstm 128 \
+# --size_fc_layer 64 \
+# --record True
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_layerNorm \
+# --model_number 101 \
+# --others_input_type relpos_vel \
+# --obstacles_input_type dynamic_points6 \
+# --size_query_agent_state 64 \
+# --size_other_agents_state 64 \
+# --size_other_agents_bilstm 64 \
+# --size_obstacles_fc_layer 32 \
+# --size_obstacles_bilstm 32 \
+# --size_decoder_lstm 128 \
+# --size_fc_layer 64 \
+# --record True
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInput \
+# --model_number 101 \
+# --others_input_type relpos_vel \
+# --obstacles_input_type dynamic_points6 \
+# --size_query_agent_state 64 \
+# --size_other_agents_state 64 \
+# --size_other_agents_bilstm 64 \
+# --size_obstacles_fc_layer 32 \
+# --size_obstacles_bilstm 32 \
+# --size_decoder_lstm 128 \
+# --size_fc_layer 64 \
+# --record True
+
+# # Small nets w/ relative velocities and dynamic obstacles disregarding obstacles
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_regularization \
+# --model_number 102 \
+# --others_input_type relpos_relvel \
+# --obstacles_input_type dynamic_relvel \
+# --size_query_agent_state 64 \
+# --size_other_agents_state 64 \
+# --size_other_agents_bilstm 64 \
+# --size_obstacles_fc_layer 32 \
+# --size_obstacles_bilstm 32 \
+# --size_decoder_lstm 128 \
+# --size_fc_layer 64 \
+# --record True
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_layerNorm \
+# --model_number 102 \
+# --others_input_type relpos_relvel \
+# --obstacles_input_type dynamic_relvel \
+# --size_query_agent_state 64 \
+# --size_other_agents_state 64 \
+# --size_other_agents_bilstm 64 \
+# --size_obstacles_fc_layer 32 \
+# --size_obstacles_bilstm 32 \
+# --size_decoder_lstm 128 \
+# --size_fc_layer 64 \
+# --record True
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInput \
+# --model_number 102 \
+# --others_input_type relpos_relvel \
+# --obstacles_input_type dynamic_relvel \
+# --size_query_agent_state 64 \
+# --size_other_agents_state 64 \
+# --size_other_agents_bilstm 64 \
+# --size_obstacles_fc_layer 32 \
+# --size_obstacles_bilstm 32 \
+# --size_decoder_lstm 128 \
+# --size_fc_layer 64 \
+# --record True
+
+
+# # Small nets w/ relative velocities and points6 dynamic obstacles
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_regularization \
+# --model_number 103 \
+# --others_input_type relpos_relvel \
+# --obstacles_input_type dynamic_points6_relvel \
+# --size_query_agent_state 64 \
+# --size_other_agents_state 64 \
+# --size_other_agents_bilstm 64 \
+# --size_obstacles_fc_layer 32 \
+# --size_obstacles_bilstm 32 \
+# --size_decoder_lstm 128 \
+# --size_fc_layer 64 \
+# --record True
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_layerNorm \
+# --model_number 103 \
+# --others_input_type relpos_relvel \
+# --obstacles_input_type dynamic_points6_relvel \
+# --size_query_agent_state 64 \
+# --size_other_agents_state 64 \
+# --size_other_agents_bilstm 64 \
+# --size_obstacles_fc_layer 32 \
+# --size_obstacles_bilstm 32 \
+# --size_decoder_lstm 128 \
+# --size_fc_layer 64 \
+# --record True
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInput \
+# --model_number 103 \
+# --others_input_type relpos_relvel \
+# --obstacles_input_type dynamic_points6_relvel \
+# --size_query_agent_state 64 \
+# --size_other_agents_state 64 \
+# --size_other_agents_bilstm 64 \
+# --size_obstacles_fc_layer 32 \
+# --size_obstacles_bilstm 32 \
+# --size_decoder_lstm 128 \
+# --size_fc_layer 64 \
+# --record True
+
+
+# New networks
 python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_regularization \
---model_number 100 \
---others_input_type relpos_vel \
---obstacles_input_type dynamic \
---size_query_agent_state 64 \
---size_other_agents_state 64 \
---size_other_agents_bilstm 64 \
---size_obstacles_fc_layer 32 \
---size_obstacles_bilstm 32 \
---size_decoder_lstm 128 \
---size_fc_layer 64
---record True
-
-python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_layerNorm \
---model_number 100 \
---others_input_type relpos_vel \
---obstacles_input_type dynamic \
---size_query_agent_state 64 \
---size_other_agents_state 64 \
---size_other_agents_bilstm 64 \
---size_obstacles_fc_layer 32 \
---size_obstacles_bilstm 32 \
---size_decoder_lstm 128 \
---size_fc_layer 64
---record True
-
-python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_commonInput \
---model_number 100 \
---others_input_type relpos_vel \
---obstacles_input_type dynamic \
---size_query_agent_state 64 \
---size_other_agents_state 64 \
---size_other_agents_bilstm 64 \
---size_obstacles_fc_layer 32 \
---size_obstacles_bilstm 32 \
---size_decoder_lstm 128 \
---size_fc_layer 64
---record True
-
-
-# Small nets w/ absolute velocities and points6 dynamic obstacles
-python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_regularization \
---model_number 101 \
---others_input_type relpos_vel \
---obstacles_input_type dynamic_points6 \
---size_query_agent_state 64 \
---size_other_agents_state 64 \
---size_other_agents_bilstm 64 \
---size_obstacles_fc_layer 32 \
---size_obstacles_bilstm 32 \
---size_decoder_lstm 128 \
---size_fc_layer 64
---record True
-
-python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_layerNorm \
---model_number 101 \
---others_input_type relpos_vel \
---obstacles_input_type dynamic_points6 \
---size_query_agent_state 64 \
---size_other_agents_state 64 \
---size_other_agents_bilstm 64 \
---size_obstacles_fc_layer 32 \
---size_obstacles_bilstm 32 \
---size_decoder_lstm 128 \
---size_fc_layer 64
---record True
-
-python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_commonInput \
---model_number 101 \
---others_input_type relpos_vel \
---obstacles_input_type dynamic_points6 \
---size_query_agent_state 64 \
---size_other_agents_state 64 \
---size_other_agents_bilstm 64 \
---size_obstacles_fc_layer 32 \
---size_obstacles_bilstm 32 \
---size_decoder_lstm 128 \
---size_fc_layer 64
---record True
-
-# Small nets w/ relative velocities and dynamic obstacles disregarding obstacles
-python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_regularization \
+--model_name dynamicEllipsoidObstaclesRNN_separateStates \
 --model_number 102 \
 --others_input_type relpos_relvel \
 --obstacles_input_type dynamic_relvel \
@@ -186,84 +273,150 @@ python src/master_script_custom.py \
 --size_obstacles_fc_layer 32 \
 --size_obstacles_bilstm 32 \
 --size_decoder_lstm 128 \
---size_fc_layer 64
+--size_fc_layer 64 \
 --record True
 
 python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_layerNorm \
+--model_name dynamicEllipsoidObstaclesRNN_commonInput_customPooling \
 --model_number 102 \
 --others_input_type relpos_relvel \
---obstacles_input_type dynamic_relvel \
+--obstacles_input_type dynamic_points6stack_relvel \
 --size_query_agent_state 64 \
 --size_other_agents_state 64 \
 --size_other_agents_bilstm 64 \
---size_obstacles_fc_layer 32 \
---size_obstacles_bilstm 32 \
+--size_obstacles_fc_layer 64 \
+--size_obstacles_bilstm 64 \
 --size_decoder_lstm 128 \
---size_fc_layer 64
+--size_fc_layer 64 \
 --record True
 
+# Smaller networks
 python src/master_script_custom.py \
 --model_name dynamicEllipsoidObstaclesRNN_commonInput \
---model_number 102 \
+--model_number 200 \
 --others_input_type relpos_relvel \
 --obstacles_input_type dynamic_relvel \
---size_query_agent_state 64 \
---size_other_agents_state 64 \
---size_other_agents_bilstm 64 \
---size_obstacles_fc_layer 32 \
---size_obstacles_bilstm 32 \
---size_decoder_lstm 128 \
---size_fc_layer 64
---record True
-
-
-# Small nets w/ relative velocities and points6 dynamic obstacles
-python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_regularization \
---model_number 103 \
---others_input_type relpos_relvel \
---obstacles_input_type dynamic_points6_relvel \
---size_query_agent_state 64 \
---size_other_agents_state 64 \
---size_other_agents_bilstm 64 \
---size_obstacles_fc_layer 32 \
---size_obstacles_bilstm 32 \
---size_decoder_lstm 128 \
---size_fc_layer 64
+--size_query_agent_state 32 \
+--size_other_agents_state 32 \
+--size_other_agents_bilstm 32 \
+--size_obstacles_fc_layer 16 \
+--size_obstacles_bilstm 16 \
+--size_decoder_lstm 64 \
+--size_fc_layer 32 \
 --record True
 
 python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_layerNorm \
---model_number 103 \
+--model_name dynamicEllipsoidObstaclesRNN_separateStates \
+--model_number 200 \
 --others_input_type relpos_relvel \
---obstacles_input_type dynamic_points6_relvel \
---size_query_agent_state 64 \
---size_other_agents_state 64 \
---size_other_agents_bilstm 64 \
---size_obstacles_fc_layer 32 \
---size_obstacles_bilstm 32 \
---size_decoder_lstm 128 \
---size_fc_layer 64
+--obstacles_input_type dynamic_relvel \
+--size_query_agent_state 32 \
+--size_other_agents_state 32 \
+--size_other_agents_bilstm 32 \
+--size_obstacles_fc_layer 16 \
+--size_obstacles_bilstm 16 \
+--size_decoder_lstm 64 \
+--size_fc_layer 32 \
 --record True
 
+python src/master_script_custom.py \
+--model_name dynamicEllipsoidObstaclesRNN_commonInput_customPooling \
+--model_number 200 \
+--others_input_type relpos_relvel \
+--obstacles_input_type dynamic_points6stack_relvel \
+--size_query_agent_state 32 \
+--size_other_agents_state 32 \
+--size_other_agents_bilstm 32 \
+--size_obstacles_fc_layer 32 \
+--size_obstacles_bilstm 32 \
+--size_decoder_lstm 64 \
+--size_fc_layer 32 \
+--record True
+
+# Bigger networks
 python src/master_script_custom.py \
 --model_name dynamicEllipsoidObstaclesRNN_commonInput \
---model_number 103 \
+--model_number 201 \
 --others_input_type relpos_relvel \
---obstacles_input_type dynamic_points6_relvel \
---size_query_agent_state 64 \
---size_other_agents_state 64 \
---size_other_agents_bilstm 64 \
---size_obstacles_fc_layer 32 \
---size_obstacles_bilstm 32 \
---size_decoder_lstm 128 \
---size_fc_layer 64
+--obstacles_input_type dynamic_relvel \
+--size_query_agent_state 128 \
+--size_other_agents_state 128 \
+--size_other_agents_bilstm 128 \
+--size_obstacles_fc_layer 64 \
+--size_obstacles_bilstm 64 \
+--size_decoder_lstm 256 \
+--size_fc_layer 128 \
 --record True
 
+python src/master_script_custom.py \
+--model_name dynamicEllipsoidObstaclesRNN_separateStates \
+--model_number 201 \
+--others_input_type relpos_relvel \
+--obstacles_input_type dynamic_relvel \
+--size_query_agent_state 128 \
+--size_other_agents_state 128 \
+--size_other_agents_bilstm 128 \
+--size_obstacles_fc_layer 64 \
+--size_obstacles_bilstm 64 \
+--size_decoder_lstm 256 \
+--size_fc_layer 128 \
+--record True
 
+python src/master_script_custom.py \
+--model_name dynamicEllipsoidObstaclesRNN_commonInput_customPooling \
+--model_number 201 \
+--others_input_type relpos_relvel \
+--obstacles_input_type dynamic_points6stack_relvel \
+--size_query_agent_state 128 \
+--size_other_agents_state 128 \
+--size_other_agents_bilstm 128 \
+--size_obstacles_fc_layer 128 \
+--size_obstacles_bilstm 128 \
+--size_decoder_lstm 256 \
+--size_fc_layer 128 \
+--record True
 
+# Even bigger networks
+python src/master_script_custom.py \
+--model_name dynamicEllipsoidObstaclesRNN_commonInput \
+--model_number 202 \
+--others_input_type relpos_relvel \
+--obstacles_input_type dynamic_relvel \
+--size_query_agent_state 256 \
+--size_other_agents_state 256 \
+--size_other_agents_bilstm 256 \
+--size_obstacles_fc_layer 128 \
+--size_obstacles_bilstm 128 \
+--size_decoder_lstm 512 \
+--size_fc_layer 256 \
+--record True
 
+python src/master_script_custom.py \
+--model_name dynamicEllipsoidObstaclesRNN_separateStates \
+--model_number 202 \
+--others_input_type relpos_relvel \
+--obstacles_input_type dynamic_relvel \
+--size_query_agent_state 256 \
+--size_other_agents_state 256 \
+--size_other_agents_bilstm 256 \
+--size_obstacles_fc_layer 128 \
+--size_obstacles_bilstm 128 \
+--size_decoder_lstm 512 \
+--size_fc_layer 256 \
+--record True
 
+python src/master_script_custom.py \
+--model_name dynamicEllipsoidObstaclesRNN_commonInput_customPooling \
+--model_number 202 \
+--others_input_type relpos_relvel \
+--obstacles_input_type dynamic_points6stack_relvel \
+--size_query_agent_state 256 \
+--size_other_agents_state 256 \
+--size_other_agents_bilstm 256 \
+--size_obstacles_fc_layer 256 \
+--size_obstacles_bilstm 256 \
+--size_decoder_lstm 512 \
+--size_fc_layer 256 \
+--record True
 
 notify-send "Script has finished running"

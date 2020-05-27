@@ -8,7 +8,6 @@ tfkm = tf.keras.models
 tfkl = tf.keras.layers
 tfkr = tf.keras.regularizers
 
-
 class StateEncoder(tfkl.Layer):
     def __init__(self, args):
         super().__init__()
@@ -31,18 +30,22 @@ class OtherQuadsEncoder(tfkl.Layer):
         self.rnn_state_size_lstm_quad = args.size_other_agents_state
         self.rnn_state_size_bilstm = args.size_other_agents_bilstm
 
-        self.lstm_other_quads = tfkl.LSTM(self.rnn_state_size_lstm_quad, name = 'lstm_other_quads', return_sequences = False, \
+        self.lstm_other_quads_pos = tfkl.LSTM(self.rnn_state_size_lstm_quad//2, name = 'lstm_other_quads_pos', return_sequences = False, \
             kernel_regularizer = tfkr.l2(self.regularization_factor), recurrent_regularizer = tfkr.l2(self.regularization_factor), bias_regularizer = tfkr.l2(self.regularization_factor), activity_regularizer = tfkr.l2(self.regularization_factor))
+        self.lstm_other_quads_vel = tfkl.LSTM(self.rnn_state_size_lstm_quad//2, name = 'lstm_other_quads_vel', return_sequences = False, \
+            kernel_regularizer = tfkr.l2(self.regularization_factor), recurrent_regularizer = tfkr.l2(self.regularization_factor), bias_regularizer = tfkr.l2(self.regularization_factor), activity_regularizer = tfkr.l2(self.regularization_factor))
+        self.concat = tfkl.Concatenate()
         self.bilstm = tfkl.Bidirectional(\
             tfkl.LSTM(self.rnn_state_size_bilstm,  name = 'bilstm_other_quads', return_sequences = False, return_state = False,\
                 kernel_regularizer = tfkr.l2(self.regularization_factor), recurrent_regularizer = tfkr.l2(self.regularization_factor), bias_regularizer = tfkr.l2(self.regularization_factor), activity_regularizer = tfkr.l2(self.regularization_factor)), merge_mode = 'ave') # Average of forward and backward LSTMs
-
         
     def call(self, x):
         other_quads = []
-        # for x_quad in x:
         for quad_idx in range(x.shape[-1]):
-            other_quads.append(self.lstm_other_quads(x[:, :, :, quad_idx]))
+            processed_positions = self.lstm_other_quads_pos(x[:, :, 0:3, quad_idx])
+            processed_velocities = self.lstm_other_quads_vel(x[:, :, 3:6, quad_idx])
+            concat = self.concat([processed_positions, processed_velocities])
+            other_quads.append(concat)
         stacked_other_quads = tf.stack(other_quads, axis = 1)
         out = self.bilstm(stacked_other_quads)
         return out
@@ -55,8 +58,11 @@ class DynamicObstaclesEncoder(tfkl.Layer):
         self.fc_units = args.size_obstacles_fc_layer
         self.rnn_state_size_bilstm = args.size_obstacles_bilstm
 
-        self.fc_obs = tfkl.Dense(self.fc_units, activation = 'relu',\
+        self.fc_obs_pos = tfkl.Dense(self.fc_units//2, activation = 'relu',\
             kernel_regularizer = tfkr.l2(self.regularization_factor), bias_regularizer = tfkr.l2(self.regularization_factor), activity_regularizer = tfkr.l2(self.regularization_factor))
+        self.fc_obs_vel = tfkl.Dense(self.fc_units//2, activation = 'relu',\
+            kernel_regularizer = tfkr.l2(self.regularization_factor), bias_regularizer = tfkr.l2(self.regularization_factor), activity_regularizer = tfkr.l2(self.regularization_factor))
+        self.concat = tfkl.Concatenate()
         self.bilstm = tfkl.Bidirectional(\
             tfkl.LSTM(self.rnn_state_size_bilstm,  name = 'bilstm_obs', return_sequences = False, return_state = False,\
                 kernel_regularizer = tfkr.l2(self.regularization_factor), recurrent_regularizer = tfkr.l2(self.regularization_factor), bias_regularizer = tfkr.l2(self.regularization_factor), activity_regularizer = tfkr.l2(self.regularization_factor)), merge_mode = 'ave') # Average of forward and backward LSTMs
@@ -64,7 +70,10 @@ class DynamicObstaclesEncoder(tfkl.Layer):
     def call(self, x):
         obs = []
         for obs_idx in range(x.shape[-1]):
-            obs.append(self.fc_obs(x[:, :, obs_idx]))
+            processed_positions = self.fc_obs_pos(x[:, 0:3, obs_idx])
+            processed_velocities = self.fc_obs_vel(x[:, 3:6, obs_idx])
+            concat = self.concat([processed_positions, processed_velocities])
+            obs.append(concat)
         stacked_obs = tf.stack(obs, axis = 1)
         out = self.bilstm(stacked_obs)
         return out

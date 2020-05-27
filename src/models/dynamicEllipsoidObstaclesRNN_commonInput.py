@@ -31,7 +31,7 @@ class CommonEncoder(tfkl.Layer):
         self.reg_factor = 0.01
         self.rnn_state_size_lstm_other_quads = args.size_other_agents_state
         self.fc_state_size_obstacles = args.size_obstacles_fc_layer
-        self.rnn_state_size_bilstm = args.size_obstacles_bilstm
+        self.rnn_state_size_bilstm = args.size_obstacles_bilstm + args.size_other_agents_bilstm
         
         self.lstm_other_quads = tfkl.LSTM(self.rnn_state_size_lstm_other_quads, name = 'lstm_other_quads', return_sequences = False, kernel_regularizer = tfkr.l2(self.reg_factor), recurrent_regularizer = tfkr.l2(self.reg_factor), bias_regularizer = tfkr.l2(self.reg_factor), activity_regularizer = tfkr.l2(self.reg_factor))
         self.fc_obs = tfkl.Dense(self.fc_state_size_obstacles, activation = 'relu')
@@ -75,11 +75,11 @@ class FullModel(tfk.Model):
                 self.velocity_L2_errors.append(tfk.metrics.RootMeanSquaredError(name='velocity_L2_error_at_' + test_prediction_horizon))
         
         # Define architecture
-        self.state_encoder = StateEncoder(rnn_state_size = args.size_query_agent_state)
+        self.state_encoder = StateEncoder(args)
         self.common_encoder = CommonEncoder(args)
         self.concat = tfkl.Concatenate()
         self.repeat = tfkl.RepeatVector(self.prediction_horizon)
-        self.decoder = Decoder(rnn_state_size_lstm_concat = args.size_decoder_lstm, fc_hidden_unit_size = args.size_fc_layer)
+        self.decoder = Decoder(args)
                 
     def call(self, x):
         x1 = self.state_encoder(x["query_input"])

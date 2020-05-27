@@ -6,6 +6,17 @@ import importlib
 
 # sys.path.append("../") # This line is needed if we want to import modules using "src." at the beginning
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 def parse_args(defaults):
     parser = argparse.ArgumentParser(description="Drone Prediction Model parameters")
     
@@ -32,6 +43,7 @@ def parse_args(defaults):
     parser.add_argument('--train', help="Boolean to determine whether to train or to test", type=str2bool, default=defaults['TRAIN'])
     parser.add_argument('--warmstart', type=str2bool, default=defaults['WARMSTART'])
     parser.add_argument('--summary', type=str2bool, default=defaults['SUMMARY'])
+    parser.add_argument('--summary_file', type=str, default=defaults['summary_file'])
     parser.add_argument('--display', type=str2bool, default=defaults['DISPLAY'])
     parser.add_argument('--record', type=str2bool, default=defaults['RECORD'])
     parser.add_argument('--export_plotting_data', type=str2bool, default=defaults['EXPORT_PLOTTING_DATA'])
@@ -50,6 +62,7 @@ def parse_args(defaults):
     parser.add_argument('--max_steps', type=int, default=defaults['MAX_STEPS'])
     parser.add_argument('--train_patience', type=int, default=defaults['TRAIN_PATIENCE'])
     parser.add_argument('--batch_size', type=int, default=defaults['BATCH_SIZE'])
+    parser.add_argument('--regularization_factor', type=float, default=defaults['regularization_factor'])
 
     #### Network architecture ####
     # parser.add_argument('--input_types', help="String with the list of input types", type=str, default=defaults['input_types'])
@@ -109,6 +122,16 @@ def model_selector(args):
         from models.dynamicEllipsoidObstaclesRNN_subInputs import FullModel
     elif args.model_name == "onlyEllipsoidObstaclesRNN_RBF":
         from models.onlyEllipsoidObstaclesRNN_RBF import FullModel
+    elif args.model_name == "dynamicEllipsoidObstaclesRNN_customPooling":
+        from models.dynamicEllipsoidObstaclesRNN_customPooling import FullModel
+        if "stack" not in args.obstacles_input_type:
+            print(f"{bcolors.FAIL}WARNING: An invalid obstacles_input_type was specified for this type of model, so 'dynamic_points6stack' was selected instead.{bcolors.ENDC}")
+            args.obstacles_input_type = "dynamic_points6stack"
+    elif args.model_name == "dynamicEllipsoidObstaclesRNN_commonInput_customPooling":
+        from models.dynamicEllipsoidObstaclesRNN_commonInput_customPooling import FullModel
+        if "stack" not in args.obstacles_input_type:
+            print(f"{bcolors.FAIL}WARNING: An invalid obstacles_input_type was specified for this type of model, so 'dynamic_points6stack' was selected instead.{bcolors.ENDC}")
+            args.obstacles_input_type = "dynamic_points6stack"
     else:
         try:
             module = importlib.import_module("models." + args.model_name)
@@ -361,7 +384,8 @@ def save_full_model_summary(args, last_train_loss, train_loss, val_loss, test_lo
     """
     Store model summary
     """
-    summary_file = "trained_models_summary_v2.csv"
+    # summary_file = "trained_models_summary_v2.csv"
+    summary_file = args.summary_file
     
     new_row = [
         args.model_name,
@@ -491,152 +515,152 @@ def save_full_model_summary(args, last_train_loss, train_loss, val_loss, test_lo
         writer.writerows(lines)
 
 
-def save_full_model_summary_v2(args, last_train_loss, train_loss, val_loss, test_loss, termination_type, train_time, fde_list):
-    """
-    [UNUSED FOR NOW]
-    Store model summary.
-    Variation to also include transfer learning parameters.
-    """
-    summary_file = "trained_models_summary_v3.csv"
+# def save_full_model_summary_v2(args, last_train_loss, train_loss, val_loss, test_loss, termination_type, train_time, fde_list):
+#     """
+#     [UNUSED FOR NOW]
+#     Store model summary.
+#     Variation to also include transfer learning parameters.
+#     """
+#     summary_file = "trained_models_summary_v3.csv"
     
-    new_row = [
-        args.model_name,
-        args.model_number,
-        args.past_horizon,
-        args.prediction_horizon,
-        args.test_prediction_horizons,
-        last_train_loss,
-        train_loss,
-        val_loss,
-        test_loss,
-        fde_list[0]["position"],
-        fde_list[1]["position"],
-        fde_list[2]["position"],
-        fde_list[3]["position"],
-        fde_list[0]["velocity"],
-        fde_list[1]["velocity"],
-        fde_list[2]["velocity"],
-        fde_list[3]["velocity"],
-        args.query_input_type,
-        args.others_input_type,
-        args.obstacles_input_type,
-        args.target_type,
-        args.max_epochs,
-        args.max_steps,
-        args.train_patience,
-        args.batch_size,
-        termination_type,
-        args.datasets_training,
-        args.datasets_validation,
-        args.datasets_testing,
-        args.separate_goals,
-        args.separate_obstacles,
-        args.size_query_agent_state,
-        args.size_other_agents_state,
-        args.size_other_agents_bilstm,
-        args.size_obstacles_fc_layer,
-        args.size_obstacles_bilstm,
-        args.size_decoder_lstm,
-        args.size_fc_layer,
-        args.transfer_learning_others,
-        args.model_name_others_encoder,
-        args.model_number_others_encoder,
-        args.transfer_learning_obstacles,
-        args.model_name_obstacles_encoder,
-        args.model_number_obstacles_encoder,
-        train_time,
-        datetime.now().strftime("%d/%m/%Y %H:%M") 
-    ]
+#     new_row = [
+#         args.model_name,
+#         args.model_number,
+#         args.past_horizon,
+#         args.prediction_horizon,
+#         args.test_prediction_horizons,
+#         last_train_loss,
+#         train_loss,
+#         val_loss,
+#         test_loss,
+#         fde_list[0]["position"],
+#         fde_list[1]["position"],
+#         fde_list[2]["position"],
+#         fde_list[3]["position"],
+#         fde_list[0]["velocity"],
+#         fde_list[1]["velocity"],
+#         fde_list[2]["velocity"],
+#         fde_list[3]["velocity"],
+#         args.query_input_type,
+#         args.others_input_type,
+#         args.obstacles_input_type,
+#         args.target_type,
+#         args.max_epochs,
+#         args.max_steps,
+#         args.train_patience,
+#         args.batch_size,
+#         termination_type,
+#         args.datasets_training,
+#         args.datasets_validation,
+#         args.datasets_testing,
+#         args.separate_goals,
+#         args.separate_obstacles,
+#         args.size_query_agent_state,
+#         args.size_other_agents_state,
+#         args.size_other_agents_bilstm,
+#         args.size_obstacles_fc_layer,
+#         args.size_obstacles_bilstm,
+#         args.size_decoder_lstm,
+#         args.size_fc_layer,
+#         args.transfer_learning_others,
+#         args.model_name_others_encoder,
+#         args.model_number_others_encoder,
+#         args.transfer_learning_obstacles,
+#         args.model_name_obstacles_encoder,
+#         args.model_number_obstacles_encoder,
+#         train_time,
+#         datetime.now().strftime("%d/%m/%Y %H:%M") 
+#     ]
     
-    prediction_horizons = []
-    for prediction_horizon in args.test_prediction_horizons.split(" "):
-        prediction_horizons.append(int(prediction_horizon))
+#     prediction_horizons = []
+#     for prediction_horizon in args.test_prediction_horizons.split(" "):
+#         prediction_horizons.append(int(prediction_horizon))
     
-    # If the file does not exist already, create first row
-    if not os.path.isfile(summary_file):
-        with open(summary_file, 'w') as new_file:
-            first_row = [
-                "Model name", 
-                "Model number",
-                "Past horizon",
-                "Prediction horizon",
-                "Test prediction horizons",
-                "Lowest training loss",
-                "Saved model training loss",
-                "Validation loss",
-                "Test loss",
-                f"FDE@%d steps (pos)" % prediction_horizons[0],
-                f"FDE@%d steps (pos)" % prediction_horizons[1],
-                f"FDE@%d steps (pos)" % prediction_horizons[2],
-                f"FDE@%d steps (pos)" % prediction_horizons[3],
-                f"FDE@%d steps (vel)" % prediction_horizons[0],
-                f"FDE@%d steps (vel)" % prediction_horizons[1],
-                f"FDE@%d steps (vel)" % prediction_horizons[2],
-                f"FDE@%d steps (vel)" % prediction_horizons[3],
-                "Query input type",
-                "Others input type",
-                "Obstacle input type",
-                "Target type",
-                "Max epochs",
-                "Max steps",
-                "Train patience",
-                "Batch size",
-                "Termination",
-                "Training datasets",
-                "Validation datasets",
-                "Test datasets",
-                "Separate goals",
-                "Separate obstacles",
-                "Size query agent state",
-                "Size other agents state",
-                "Size other agents biLSTM",
-                "Size obstacles FC layer",
-                "Size obstacles biLSTM",
-                "Size decoder LSTM",
-                "Size fc layer",
-                "Trasfer learning others encoder",
-                "Others encoder model name",
-                "Others encoder model number",
-                "Trasfer learning obstacles encoder",
-                "Obstacles encoder model name",
-                "Obstacles encoder model number",
-                "Training time (sec)",
-                "Date"
-            ]
+#     # If the file does not exist already, create first row
+#     if not os.path.isfile(summary_file):
+#         with open(summary_file, 'w') as new_file:
+#             first_row = [
+#                 "Model name", 
+#                 "Model number",
+#                 "Past horizon",
+#                 "Prediction horizon",
+#                 "Test prediction horizons",
+#                 "Lowest training loss",
+#                 "Saved model training loss",
+#                 "Validation loss",
+#                 "Test loss",
+#                 f"FDE@%d steps (pos)" % prediction_horizons[0],
+#                 f"FDE@%d steps (pos)" % prediction_horizons[1],
+#                 f"FDE@%d steps (pos)" % prediction_horizons[2],
+#                 f"FDE@%d steps (pos)" % prediction_horizons[3],
+#                 f"FDE@%d steps (vel)" % prediction_horizons[0],
+#                 f"FDE@%d steps (vel)" % prediction_horizons[1],
+#                 f"FDE@%d steps (vel)" % prediction_horizons[2],
+#                 f"FDE@%d steps (vel)" % prediction_horizons[3],
+#                 "Query input type",
+#                 "Others input type",
+#                 "Obstacle input type",
+#                 "Target type",
+#                 "Max epochs",
+#                 "Max steps",
+#                 "Train patience",
+#                 "Batch size",
+#                 "Termination",
+#                 "Training datasets",
+#                 "Validation datasets",
+#                 "Test datasets",
+#                 "Separate goals",
+#                 "Separate obstacles",
+#                 "Size query agent state",
+#                 "Size other agents state",
+#                 "Size other agents biLSTM",
+#                 "Size obstacles FC layer",
+#                 "Size obstacles biLSTM",
+#                 "Size decoder LSTM",
+#                 "Size fc layer",
+#                 "Trasfer learning others encoder",
+#                 "Others encoder model name",
+#                 "Others encoder model number",
+#                 "Trasfer learning obstacles encoder",
+#                 "Obstacles encoder model name",
+#                 "Obstacles encoder model number",
+#                 "Training time (sec)",
+#                 "Date"
+#             ]
             
-            writer = csv.writer(new_file)
-            writer.writerow(first_row)
+#             writer = csv.writer(new_file)
+#             writer.writerow(first_row)
 
     
-    with open(summary_file, 'r') as in_file:
-        reader = csv.reader(in_file)
-        lines = list(reader)
-        # lines = list(filter(None, list(reader))) # To remove empty lines which appear in Windows
-        if len(lines) == 1:
-            lines.append(new_row)
-        else:
-            rewrite = False
-            new_model = True
-            for idx in range(len(lines)):
-                if lines[idx][0] == new_row[0]: # If there are already models with the same name
-                    if new_model == True:
-                        new_idx = idx
-                        new_model = False
+#     with open(summary_file, 'r') as in_file:
+#         reader = csv.reader(in_file)
+#         lines = list(reader)
+#         # lines = list(filter(None, list(reader))) # To remove empty lines which appear in Windows
+#         if len(lines) == 1:
+#             lines.append(new_row)
+#         else:
+#             rewrite = False
+#             new_model = True
+#             for idx in range(len(lines)):
+#                 if lines[idx][0] == new_row[0]: # If there are already models with the same name
+#                     if new_model == True:
+#                         new_idx = idx
+#                         new_model = False
 
-                    if lines[idx][1] == new_row[1]: # If experiment number is the same, substitute data
-                        lines[idx] = new_row
-                        rewrite = True
-                    elif int(lines[idx][1]) < new_row[1]: # Else store the idx of the last data entry with an experiment number lower than the one of the new data
-                        new_idx = idx+1
+#                     if lines[idx][1] == new_row[1]: # If experiment number is the same, substitute data
+#                         lines[idx] = new_row
+#                         rewrite = True
+#                     elif int(lines[idx][1]) < new_row[1]: # Else store the idx of the last data entry with an experiment number lower than the one of the new data
+#                         new_idx = idx+1
 
-            if new_model:
-                lines.append(new_row)
-            elif not rewrite:
-                lines.insert(new_idx, new_row)
+#             if new_model:
+#                 lines.append(new_row)
+#             elif not rewrite:
+#                 lines.insert(new_idx, new_row)
     
-    with open(summary_file, 'w', newline='') as out_file:
-        writer = csv.writer(out_file)
-        writer.writerows(lines)
+#     with open(summary_file, 'w', newline='') as out_file:
+#         writer = csv.writer(out_file)
+#         writer.writerows(lines)
 
 
 def get_paths(trained_models_dir, args):
