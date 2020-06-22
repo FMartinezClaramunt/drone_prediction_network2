@@ -32,11 +32,11 @@ class CommonEncoder(tfkl.Layer):
         self.reg_factor = 0.01
         self.rnn_state_size_lstm_other_quads = args.size_other_agents_state
         self.fc_state_size_obstacles = args.size_obstacles_fc_layer
-        self.rnn_state_size_bilstm = args.size_obstacles_bilstm + args.size_other_agents_bilstm
+        # self.rnn_state_size_bilstm = args.size_obstacles_bilstm + args.size_other_agents_bilstm
         
         self.lstm_other_quads = tfkl.LSTM(self.rnn_state_size_lstm_other_quads, name = 'lstm_other_quads', return_sequences = False, kernel_regularizer = tfkr.l2(self.reg_factor), recurrent_regularizer = tfkr.l2(self.reg_factor), bias_regularizer = tfkr.l2(self.reg_factor), activity_regularizer = tfkr.l2(self.reg_factor))
         self.fc_obs = tfkl.Dense(self.fc_state_size_obstacles, activation = 'relu')
-        self.bilstm = tfkl.Bidirectional(tfkl.LSTM(self.rnn_state_size_bilstm,  name = 'bilstm_obs', return_sequences = False, return_state = False, kernel_regularizer = tfkr.l2(self.reg_factor), recurrent_regularizer = tfkr.l2(self.reg_factor), bias_regularizer = tfkr.l2(self.reg_factor), activity_regularizer = tfkr.l2(self.reg_factor)), merge_mode = 'ave') # Average of forward and backward LSTMs
+        # self.bilstm = tfkl.Bidirectional(tfkl.LSTM(self.rnn_state_size_bilstm,  name = 'bilstm_obs', return_sequences = False, return_state = False, kernel_regularizer = tfkr.l2(self.reg_factor), recurrent_regularizer = tfkr.l2(self.reg_factor), bias_regularizer = tfkr.l2(self.reg_factor), activity_regularizer = tfkr.l2(self.reg_factor)), merge_mode = 'ave') # Average of forward and backward LSTMs
         
         
     def call(self, x):        
@@ -54,7 +54,8 @@ class CommonEncoder(tfkl.Layer):
             self.fc_obs(tf.zeros((self.batch_size, 6)))
         
         stacked_obs = tf.stack(processed_objects, axis = 1)
-        out = self.bilstm(stacked_obs)
+        # out = self.bilstm(stacked_obs)
+        out = tf.math.reduce_max(stacked_obs, axis = 1)
         return out
 
 

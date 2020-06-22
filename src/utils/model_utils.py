@@ -89,6 +89,10 @@ def parse_args(defaults):
     parser.add_argument('--size_decoder_lstm', help="Size of the recurrent decoder", type=int, default=defaults['size_decoder_lstm'])
     parser.add_argument('--size_fc_layer', help="Size of the hidden fully connected layer before the output", type=int, default=defaults['size_fc_layer'])
 
+    # Activation functions
+    parser.add_argument('--fc_activation', type=str, default=defaults['fc_activation'])
+    parser.add_argument('--lstm_activation', type=str, default=defaults['lstm_activation'])
+
     args = parser.parse_args()
 
     return args
@@ -149,16 +153,25 @@ def combine_args(parsed_args, stored_args):
     new_args = deepcopy(parsed_args)
     
     new_args.query_input_type = stored_args.query_input_type
-    new_args.others_input_type = stored_args.others_input_type
-    new_args.obstacles_input_type = stored_args.obstacles_input_type
     new_args.target_type = stored_args.target_type
+    
+    # If the parsed type of others or obstacles is "none", ignored the stored value
+    if new_args.others_input_type != "none":
+        new_args.others_input_type = stored_args.others_input_type
+    if new_args.obstacles_input_type != "none": 
+        new_args.obstacles_input_type = stored_args.obstacles_input_type
+    
+    if new_args.train == False and "obs" not in new_args.datasets_testing.lower():
+        new_args.obstacles_input_type = "none"
     
     new_args.past_horizon = stored_args.past_horizon
     # new_args.prediction_horizon = stored_args.prediction_horizon
 
     new_args.separate_goals = stored_args.separate_goals
     new_args.separate_obstacles = stored_args.separate_obstacles
-    new_args.remove_stuck_quadrotors = stored_args.remove_stuck_quadrotors
+    
+    if "remove_stuck_quadrotors" in stored_args:
+        new_args.remove_stuck_quadrotors = stored_args.remove_stuck_quadrotors
 
     # Encoder sizes
     new_args.size_query_agent_state = stored_args.size_query_agent_state
@@ -171,6 +184,11 @@ def combine_args(parsed_args, stored_args):
     # Decoder sizes
     new_args.size_decoder_lstm = stored_args.size_decoder_lstm
     new_args.size_decoder_lstm = stored_args.size_decoder_lstm
+    
+    # Activation functions
+    if "fc_activation" in stored_args:
+        new_args.fc_activation = stored_args.fc_activation
+        new_args.lstm_activation = stored_args.lstm_activation
     
     return new_args
 

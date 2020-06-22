@@ -678,8 +678,6 @@ class scaler():
             # scaled_data[key] = X_std * (self.feature_range[1]-self.feature_range[0]) + self.feature_range[0]
             
             if tf.is_tensor(data[key]):
-                # unscaled_data = data[key]#.numpy()
-                
                 if len(data[key].shape) == 2:
                     X_std = (data[key] - self.mins[key][np.newaxis,:])/(self.maxs[key][np.newaxis,:] - self.mins[key][np.newaxis,:])
                     scaled_data[key] = X_std * (self.feature_range[1]-self.feature_range[0]) + self.feature_range[0]

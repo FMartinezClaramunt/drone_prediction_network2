@@ -4,11 +4,14 @@ Stacks dynamic obstacles and quadrotors together before they get processed by th
 """
 
 import tensorflow as tf
-from models.dynamicEllipsoidObstaclesRNN_regularization import StateEncoder, Decoder
 tfk = tf.keras
 tfkm = tf.keras.models
 tfkl = tf.keras.layers
 tfkr = tf.keras.regularizers
+
+# {relu, sigmoid, tanh}
+lstm_activation = "relu"
+fc_activation = "sigmoid"
 
 class bcolors:
     HEADER = '\033[95m'
@@ -19,6 +22,20 @@ class bcolors:
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
+
+class StateEncoder(tfkl.Layer):
+    def __init__(self, args):
+        super().__init__()
+        
+        self.regularization_factor = args.regularization_factor
+        self.rnn_state_size = args.size_query_agent_state
+        
+        self.lstm_quad = tfkl.LSTM(self.rnn_state_size, activation = lstm_activation, name = 'lstm_state', return_sequences = False,\
+            kernel_regularizer = tfkr.l2(self.regularization_factor), recurrent_regularizer = tfkr.l2(self.regularization_factor), bias_regularizer = tfkr.l2(self.regularization_factor), activity_regularizer = tfkr.l2(self.regularization_factor))
+        
+    def call(self, x):
+        out = self.lstm_quad(x)
+        return out
 
 class CommonEncoder(tfkl.Layer):
     def __init__(self, args):
@@ -32,11 +49,10 @@ class CommonEncoder(tfkl.Layer):
         self.reg_factor = 0.01
         self.rnn_state_size_lstm_other_quads = args.size_other_agents_state
         self.fc_state_size_obstacles = args.size_obstacles_fc_layer
-        self.rnn_state_size_bilstm = args.size_obstacles_bilstm + args.size_other_agents_bilstm
+        # self.rnn_state_size_bilstm = args.size_obstacles_bilstm + args.size_other_agents_bilstm
         
-        self.lstm_other_quads = tfkl.LSTM(self.rnn_state_size_lstm_other_quads, name = 'lstm_other_quads', return_sequences = False, kernel_regularizer = tfkr.l2(self.reg_factor), recurrent_regularizer = tfkr.l2(self.reg_factor), bias_regularizer = tfkr.l2(self.reg_factor), activity_regularizer = tfkr.l2(self.reg_factor))
-        self.fc_obs = tfkl.Dense(self.fc_state_size_obstacles, activation = 'relu')
-        self.bilstm = tfkl.Bidirectional(tfkl.LSTM(self.rnn_state_size_bilstm,  name = 'bilstm_obs', return_sequences = False, return_state = False, kernel_regularizer = tfkr.l2(self.reg_factor), recurrent_regularizer = tfkr.l2(self.reg_factor), bias_regularizer = tfkr.l2(self.reg_factor), activity_regularizer = tfkr.l2(self.reg_factor)), merge_mode = 'ave') # Average of forward and backward LSTMs
+        self.lstm_other_quads = tfkl.LSTM(self.rnn_state_size_lstm_other_quads, activation = lstm_activation, name = 'lstm_other_quads', return_sequences = False, kernel_regularizer = tfkr.l2(self.reg_factor), recurrent_regularizer = tfkr.l2(self.reg_factor), bias_regularizer = tfkr.l2(self.reg_factor), activity_regularizer = tfkr.l2(self.reg_factor))
+        self.fc_obs = tfkl.Dense(self.fc_state_size_obstacles, activation = fc_activation)
         
         
     def call(self, x):        
@@ -54,9 +70,37 @@ class CommonEncoder(tfkl.Layer):
             self.fc_obs(tf.zeros((self.batch_size, 6)))
         
         stacked_obs = tf.stack(processed_objects, axis = 1)
-        out = self.bilstm(stacked_obs)
+        # out = self.bilstm(stacked_obs)
+        out = tf.math.reduce_max(stacked_obs, axis = 1)
         return out
 
+
+class Decoder(tfkl.Layer):
+    def __init__(self, args):
+        super().__init__()
+        
+        self.output_dim = 3 # X, Y and Z coordinates of either position or velocity
+        self.regularization_factor = args.regularization_factor
+    
+        self.rnn_state_size_lstm_concat = args.size_decoder_lstm
+        self.fc_hidden_unit_size = args.size_fc_layer
+
+        self.lstm_concat = tfkl.LSTM(self.rnn_state_size_lstm_concat, activation = lstm_activation, name = 'lstm_decoder', return_sequences = True, return_state = False,\
+            kernel_regularizer = tfkr.l2(self.regularization_factor), recurrent_regularizer = tfkr.l2(self.regularization_factor), bias_regularizer = tfkr.l2(self.regularization_factor), activity_regularizer = tfkr.l2(self.regularization_factor))
+        
+        # Achieves better performance but takes a bit longer to train
+        # self.lstm_concat = tfkl.Bidirectional( tfkl.LSTM(self.rnn_state_size_lstm_concat, name = 'lstm_decoder', return_sequences = True, return_state = False,\
+        #     kernel_regularizer = tfkr.l2(self.regularization_factor), recurrent_regularizer = tfkr.l2(self.regularization_factor), bias_regularizer = tfkr.l2(self.regularization_factor), activity_regularizer = tfkr.l2(self.regularization_factor)) , merge_mode = 'ave')
+        
+        self.fc1 = tfkl.TimeDistributed(tfkl.Dense(self.fc_hidden_unit_size, name = 'fc_decoder', activation = fc_activation,\
+            kernel_regularizer = tfkr.l2(self.regularization_factor), bias_regularizer = tfkr.l2(self.regularization_factor), activity_regularizer = tfkr.l2(self.regularization_factor)))
+        self.fco = tfkl.TimeDistributed(tfkl.Dense(self.output_dim, name = 'fc_out'))
+                
+    def call(self, x):        
+        out = self.lstm_concat(x)
+        out = self.fc1(out)
+        out = self.fco(out)
+        return out
 
 class FullModel(tfk.Model):
     def __init__(self, args):

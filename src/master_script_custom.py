@@ -35,7 +35,7 @@ data_master_dir = os.path.join(root_dir, "data", "")
 raw_data_dir = os.path.join(data_master_dir, "Raw", "")
 tfrecord_data_dir = os.path.join(data_master_dir, "TFRecord", "")
 trained_models_dir = os.path.join(root_dir, "trained_models", "")
-summary_file = "trained_models_summary_v3.csv"
+summary_file = "trained_models_summary_v4.csv"
 
 #### Model selection ####
 # model_name = "varyingNQuadsRNN_v2"
@@ -45,13 +45,16 @@ summary_file = "trained_models_summary_v3.csv"
 # model_name = "dynamicEllipsoidObstaclesRNN_layerNorm"
 # model_name = "dynamicEllipsoidObstaclesRNN_subInputs"
 # model_name = "dynamicEllipsoidObstaclesRNN_commonInput"
+# model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling"
+model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
+# model_name = "dynamicEllipsoidObstaclesRNN_commonInput_extraFC"
 # model_name = "dynamicEllipsoidObstaclesRNN_separateStates"
 # model_name = "dynamicEllipsoidObstaclesRNN_customPooling"
-model_name = "dynamicEllipsoidObstaclesRNN_commonInput_customPooling"
+# model_name = "dynamicEllipsoidObstaclesRNN_commonInput_customPooling"
 # model_name = "onlyEllipsoidObstaclesRNN"
 # model_name = "onlyEllipsoidObstaclesRNN_RBF"
 
-model_number = 0
+model_number = 303
 
 TRANSFER_LEARNING_OTHERS = False
 learning_rate_others_encoder = 0 # TODO: Set up an option to optimize the weigths of the others encoder even when using transfer learning
@@ -65,13 +68,13 @@ model_number_obstacles_encoder = 20
 
 #### Script options ####
 TRAIN = True
-WARMSTART = True
+WARMSTART = False
 
 SUMMARY = True # To include a summary of the results of the model in a csv file
 
 # To display and/or record an animation of the test dataset with the trajcetory predictions from the model
 DISPLAY = False
-RECORD = False
+RECORD = True
 EXPORT_PLOTTING_DATA = False
 N_FRAMES = 2000 # Number of frames to display/record
 DT = 0.05 # Used to compute the FPS of the video
@@ -95,9 +98,9 @@ PLOT_ELLIPSOIDS = False
 # datasets_validation = "staticObs6quad10_2"
 # datasets_test = datasets_validation
 
-datasets_training = "dynObs10quad10_1 dynObs10quad10_5 dynObs10quad10_6 dynObs10quad10_bugged dynObs10quad10_2"
-datasets_validation = "dynObs10quad10_3 dynObs10quad10_4"
-datasets_test = datasets_validation
+# datasets_training = "dynObs10quad10_1 dynObs10quad10_5 dynObs10quad10_6 dynObs10quad10_bugged dynObs10quad10_2"
+# datasets_validation = "dynObs10quad10_3 dynObs10quad10_4"
+# datasets_test = datasets_validation
 
 # datasets_training = "dynObs10quad10_2"
 # datasets_validation = "dynObs10quad10_3"
@@ -113,11 +116,20 @@ datasets_test = datasets_validation
 # datasets_validation = "dynObs10quad1_4"
 # datasets_test = datasets_validation
 
+# datasets_training = "sameRadDynObs10quad10_1\
+#                     sameRadDynObs10quad10_2"
+# datasets_validation = "sameRadDynObs10quad10_3"
+# datasets_test = datasets_validation
+
+datasets_training = "sameRadDynObs6quad6_1"
+datasets_validation = "sameRadDynObs6quad6_2"
+datasets_test = datasets_validation
+
 
 #### Training parameters ####
-MAX_EPOCHS = 20
+MAX_EPOCHS = 50
 MAX_STEPS = 1E6
-TRAIN_PATIENCE = 4 # Number of epochs before early stopping
+TRAIN_PATIENCE = 5 # Number of epochs before early stopping
 BATCH_SIZE = 256 
 regularization_factor = 0.01
 
@@ -142,8 +154,8 @@ else:
 # Encoder sizes
 size_query_agent_state = 64 # 256
 size_other_agents_state = 64 # 256
-size_other_agents_bilstm = 64 # 256
-size_obstacles_fc_layer = 32 # 64
+size_other_agents_bilstm = 32 # 256
+size_obstacles_fc_layer = 64 # 64
 size_obstacles_bilstm = 32 # 64
 size_action_encoding = 0 # 0
 
@@ -151,6 +163,8 @@ size_action_encoding = 0 # 0
 size_decoder_lstm = 128 # 512
 size_fc_layer = 64 # 256
 
+fc_activation = "relu"
+lstm_activation = "relu"
 
 #### Parse args ####
 args = parse_args(locals())
