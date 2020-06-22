@@ -6,3 +6,4 @@ test*
 data/TFRecord/
 .vscode/
 *.csv
+visualization/animation.avi

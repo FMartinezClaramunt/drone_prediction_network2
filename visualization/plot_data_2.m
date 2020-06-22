@@ -41,13 +41,15 @@ ws.zDim = [ 0, 3];
 % visualization configuration
 cfg.ifShowFigBox        =   1;
 cfg.ifShowFigGrid       =   1;
-cfg.ifShowQuadSize      =   0;
+cfg.ifShowQuadSize      =   1;
 cfg.ifShowQuadGoal      =   1;
 cfg.ifShowQuadTrajPast  =   1;
 cfg.ifShowQuadTrajPlan  =   1;
 cfg.ifShowQuadTrajPred  =   1;
 cfg.ifShowEgoTrajPred   =   1;      % if showing ego quad prediction traj
 cfg.ifShowObsSize       =   1;
+cfg.ifShowLegend        =   1;
+
 % color of all quad
 cfg.color_quad = cell(1, nQuad);
 if nQuad <= 7
@@ -80,7 +82,7 @@ idx_ego_quad            = 1;
 
 
 %% Initial plot
-% mian figure
+% main figure
 fig_main = figure;
 axis([ws.xDim, ws.yDim, ws.zDim]);
 ax_main = fig_main.CurrentAxes;
@@ -92,6 +94,10 @@ ax_main.Box = cfg.ifShowFigBox;
 if cfg.ifShowFigGrid
     grid(ax_main, 'on');
 end
+
+legend_handles = {};
+legend_text = {};
+
 %% quad plot
 fig_quad_pos  = cell(nQuad, 1);             % quad pos
 fig_quad_goal = cell(nQuad, 1);             % quad goal
@@ -150,6 +156,41 @@ for iQuad = 1 : nQuad
         fig_quad_traj_pred{iQuad}.Color(4) = 0.8;   % transparency
     end
 end
+
+idx_other_quad = min([1:idx_ego_quad-1 idx_ego_quad+1:nQuad]); % Just to get a handle for the legend
+
+legend_text = "Query robot";
+legend_handles = fig_quad_pos{idx_ego_quad};
+% legend_text{1} = "Query robot";
+% legend_handles{1} = fig_quad_pos{idx_ego_quad};
+
+legend_text(end+1) = "Other robot";
+legend_handles(end+1) = fig_quad_pos{idx_other_quad};
+
+if cfg.ifShowEgoTrajPred
+    legend_text(end+1) = "Past trajectory";
+    legend_handles(end+1) = fig_quad_traj_past{idx_ego_quad};
+elseif cfg.ifShowQuadTrajPast
+    legend_text(end+1) = "Past trajectory";
+    legend_handles(end+1) = fig_quad_traj_past{idx_other_quad};
+end
+
+if cfg.ifShowQuadTrajPlan
+    legend_text(end+1) = "Future trajectory";
+    legend_handles(end+1) = fig_quad_traj_plan{1};
+end
+
+if cfg.ifShowQuadTrajPred
+    legend_text(end+1) = "Predicted trajectory";
+    legend_handles(end+1) = fig_quad_traj_pred{1};
+end
+
+if cfg.ifShowQuadGoal
+    legend_text(end+1) = "Goal";
+    legend_handles(end+1) = fig_quad_goal{1};
+end
+
+
 %% obs plot
 fig_obs_pos  = cell(nObs, 1);               % quad pos
 fig_obs_size = cell(nObs, 1);               % quad size
@@ -161,12 +202,27 @@ for jObs = 1 : nObs
         'MarkerFaceAlpha', 0.6, 'MarkerEdgeAlpha', 0.6);
     % obs size
     if cfg.ifShowObsSize == 1
-        fig_obs_size{jObs} = plot_ellipsoid_3D(ax_main, obs_pos(1, :, jObs)', ...
-            obs_size(1, :, jObs), 'FaceColor', cfg.color_obs, 'FaceAlpha', 0.6, ...
-            'EdgeColor', cfg.color_obs, 'EdgeAlpha', 0.4);
+        if length(size(obs_size)) == 2
+            fig_obs_size{jObs} = plot_ellipsoid_3D(ax_main, obs_pos(1, :, jObs)', ...
+                obs_size(:, jObs), 'FaceColor', cfg.color_obs, 'FaceAlpha', 0.6, ...
+                'EdgeColor', cfg.color_obs, 'EdgeAlpha', 0.4);
+        else
+            fig_obs_size{jObs} = plot_ellipsoid_3D(ax_main, obs_pos(1, :, jObs)', ...
+                obs_size(1, :, jObs), 'FaceColor', cfg.color_obs, 'FaceAlpha', 0.6, ...
+                'EdgeColor', cfg.color_obs, 'EdgeAlpha', 0.4);
+        end
     end
 end
 
+if nObs > 0
+    legend_text(end+1) = "Obstacle";
+    legend_handles(end+1) = fig_obs_pos{1};
+end
+
+%% Legend
+if cfg.ifShowLegend
+    legend(legend_handles, legend_text)
+end
 
 %% Animation
 for kStep = 1 : nSim - 100
@@ -229,13 +285,20 @@ for kStep = 1 : nSim - 100
             'YData', obs_pos(kStep, 2, jObs), ...
             'ZData', obs_pos(kStep, 3, jObs));
         % size
-        if cfg.ifShowObsSizeNL
-            == 1
-            [X, Y, Z] = ellipsoid(obs_pos(kStep, 1, jObs), ...
-                obs_pos(kStep, 2, jObs), obs_pos(kStep, 3, jObs), ...
-                obs_size(kStep, 1, jObs), obs_size(kStep, 2, jObs), ...
-                obs_size(kStep, 3, jObs));
-            set(fig_obs_size{jObs}, 'XData', X, 'YData', Y, 'ZData', Z);
+        if cfg.ifShowObsSize == 1
+            if length(size(obs_size)) == 2
+                [X, Y, Z] = ellipsoid(obs_pos(kStep, 1, jObs), ...
+                    obs_pos(kStep, 2, jObs), obs_pos(kStep, 3, jObs), ...
+                    obs_size(1, jObs), obs_size(2, jObs), ...
+                    obs_size(3, jObs));
+                set(fig_obs_size{jObs}, 'XData', X, 'YData', Y, 'ZData', Z);
+            else
+                [X, Y, Z] = ellipsoid(obs_pos(kStep, 1, jObs), ...
+                    obs_pos(kStep, 2, jObs), obs_pos(kStep, 3, jObs), ...
+                    obs_size(kStep, 1, jObs), obs_size(kStep, 2, jObs), ...
+                    obs_size(kStep, 3, jObs));
+                set(fig_obs_size{jObs}, 'XData', X, 'YData', Y, 'ZData', Z);
+            end
         end
     end
     
