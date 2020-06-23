@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>drone-prediction-network2</name>
+  <name>drone_prediction_network2</name>
   <version>0.0.0</version>
   <description>The drone-prediction-network2 package</description>
 
