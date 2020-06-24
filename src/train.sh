@@ -442,58 +442,107 @@
 # --datasets_testing goalSequence5
 
 # Test different activations
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 400 \
+# --fc_activation relu \
+# --lstm_activation relu
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 401 \
+# --fc_activation sigmoid \
+# --lstm_activation sigmoid
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 402 \
+# --fc_activation relu \
+# --lstm_activation sigmoid
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 403 \
+# --fc_activation sigmoid \
+# --lstm_activation relu
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 404 \
+# --fc_activation tanh \
+# --lstm_activation tanh
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 405 \
+# --fc_activation tanh \
+# --lstm_activation sigmoid
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 406 \
+# --fc_activation sigmoid \
+# --lstm_activation tanh
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 407 \
+# --fc_activation tanh \
+# --lstm_activation relu
+
+# python src/master_script_custom.py \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 408 \
+# --fc_activation relu \
+# --lstm_activation tanh
+
 python src/master_script_custom.py \
+--train false \
 --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
 --model_number 400 \
---fc_activation relu \
---lstm_activation relu
+--datasets_training sameRadDynObs10quad10_3 \
+--datasets_validation sameRadDynObs10quad10_3 \
+--datasets_testing sameRadDynObs10quad10_3
 
 python src/master_script_custom.py \
+--train false \
 --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 401 \
---fc_activation sigmoid \
---lstm_activation sigmoid
+--model_number 400 \
+--datasets_training goalSequence1 \
+--datasets_validation goalSequence1 \
+--datasets_testing goalSequence1
 
 python src/master_script_custom.py \
+--train false \
 --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 402 \
---fc_activation relu \
---lstm_activation sigmoid
+--model_number 400 \
+--datasets_training dynamic16quadsPosExchange \
+--datasets_validation dynamic16quadsPosExchange \
+--datasets_testing dynamic16quadsPosExchange
 
 python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 403 \
---fc_activation sigmoid \
---lstm_activation relu
-
-python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 404 \
---fc_activation tanh \
---lstm_activation tanh
-
-python src/master_script_custom.py \
+--train false \
 --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
 --model_number 405 \
---fc_activation tanh \
---lstm_activation sigmoid
+--datasets_training sameRadDynObs10quad10_3 \
+--datasets_validation sameRadDynObs10quad10_3 \
+--datasets_testing sameRadDynObs10quad10_3
 
 python src/master_script_custom.py \
+--train false \
 --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 406 \
---fc_activation sigmoid \
---lstm_activation tanh
+--model_number 405 \
+--datasets_training goalSequence1 \
+--datasets_validation goalSequence1 \
+--datasets_testing goalSequence1
 
 python src/master_script_custom.py \
+--train false \
 --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 407 \
---fc_activation tanh \
---lstm_activation relu
+--model_number 405 \
+--datasets_training dynamic16quadsPosExchange \
+--datasets_validation dynamic16quadsPosExchange \
+--datasets_testing dynamic16quadsPosExchange
 
-python src/master_script_custom.py \
---model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 408 \
---fc_activation relu \
---lstm_activation tanh
 
 notify-send "Script has finished running"

@@ -163,8 +163,8 @@ size_action_encoding = 0 # 0
 size_decoder_lstm = 128 # 512
 size_fc_layer = 64 # 256
 
-fc_activation = "relu"
-lstm_activation = "relu"
+fc_activation = "relu" # "tanh" works best
+lstm_activation = "relu" # "sigmoid" works best
 
 #### Parse args ####
 args = parse_args(locals())
