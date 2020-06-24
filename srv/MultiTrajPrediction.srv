@@ -1,0 +1,4 @@
+std_msgs/Float64MultiArray robotTrajHistory
+std_msgs/Float64MultiArray obsState
+---
+std_msgs/Float64MultiArray robotTrajPrediction
