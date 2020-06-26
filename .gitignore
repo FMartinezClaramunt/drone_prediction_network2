@@ -7,3 +7,5 @@ data/TFRecord/
 .vscode/
 *.csv
 visualization/animation.avi
+
+.idea/
