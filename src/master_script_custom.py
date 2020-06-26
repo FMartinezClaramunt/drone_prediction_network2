@@ -127,9 +127,9 @@ datasets_test = datasets_validation
 
 
 #### Training parameters ####
-MAX_EPOCHS = 50
+MAX_EPOCHS = 15
 MAX_STEPS = 1E6
-TRAIN_PATIENCE = 5 # Number of epochs before early stopping
+TRAIN_PATIENCE = 3 # Number of epochs before early stopping
 BATCH_SIZE = 256 
 regularization_factor = 0.01
 
@@ -275,8 +275,11 @@ if args.warmstart or args.transfer_learning_others or args.transfer_learning_obs
 
 #### Training loop ####
 if args.train:    
-    step = 1
+    # Store scaler in the parameters file
+    args.scaler = data.scaler
+    pkl.dump( args, open( parameters_path, "wb" ) )
     
+    step = 0
     best_loss = float("inf")
     patience_counter = 0
     time_training_init = time.time()
@@ -336,6 +339,7 @@ if args.train:
         termination_type = "Max epochs"
         
     train_time = time.time() - time_training_init
+    
 
 # Retrieve best model
 model = model_selector(args)

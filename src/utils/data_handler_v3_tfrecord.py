@@ -69,7 +69,10 @@ class DataHandler():
         self.datasets_training = parse_dataset_names(args.datasets_training)
         self.tfrecords_training = self.getTFRecords(self.datasets_training, self.common_params)
 
-        self.scaler = self.getScaler() # Get scaler based on the data for the first quadrotor of the first training dataset
+        if "scaler" in args:
+            self.scaler = args.scaler
+        else:
+            self.scaler = self.getScaler() # Get scaler based on the data for the first quadrotor of the first training dataset
         self.n_quadrotors, self.n_obstacles = self.getNObjects() # Get total number of quadrotors 
         
         quadrotor_size = np.array([0.3, 0.3, 0.4])

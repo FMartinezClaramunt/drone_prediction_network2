@@ -496,53 +496,84 @@
 # --fc_activation relu \
 # --lstm_activation tanh
 
-python src/master_script_custom.py \
---train false \
---model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 400 \
---datasets_training sameRadDynObs10quad10_3 \
---datasets_validation sameRadDynObs10quad10_3 \
---datasets_testing sameRadDynObs10quad10_3
+# python src/master_script_custom.py \
+# --train false \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 400 \
+# --datasets_training sameRadDynObs10quad10_3 \
+# --datasets_validation sameRadDynObs10quad10_3 \
+# --datasets_testing sameRadDynObs10quad10_3
+
+# python src/master_script_custom.py \
+# --train false \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 400 \
+# --datasets_training goalSequence1 \
+# --datasets_validation goalSequence1 \
+# --datasets_testing goalSequence1
+
+# python src/master_script_custom.py \
+# --train false \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 400 \
+# --datasets_training dynamic16quadsPosExchange \
+# --datasets_validation dynamic16quadsPosExchange \
+# --datasets_testing dynamic16quadsPosExchange
+
+# python src/master_script_custom.py \
+# --train false \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 405 \
+# --datasets_training sameRadDynObs10quad10_3 \
+# --datasets_validation sameRadDynObs10quad10_3 \
+# --datasets_testing sameRadDynObs10quad10_3
+
+# python src/master_script_custom.py \
+# --train false \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 405 \
+# --datasets_training goalSequence1 \
+# --datasets_validation goalSequence1 \
+# --datasets_testing goalSequence1
+
+# python src/master_script_custom.py \
+# --train false \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 405 \
+# --datasets_training dynamic16quadsPosExchange \
+# --datasets_validation dynamic16quadsPosExchange \
+# --datasets_testing dynamic16quadsPosExchange
+
 
 python src/master_script_custom.py \
---train false \
 --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 400 \
---datasets_training goalSequence1 \
---datasets_validation goalSequence1 \
---datasets_testing goalSequence1
+--model_number 501 \
+--fc_activation relu \
+--lstm_activation relu
 
-python src/master_script_custom.py \
---train false \
---model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 400 \
---datasets_training dynamic16quadsPosExchange \
---datasets_validation dynamic16quadsPosExchange \
---datasets_testing dynamic16quadsPosExchange
+# python src/master_script_custom.py \
+# --train false \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 501 \
+# --datasets_training sameRadDynObs10quad10_3 \
+# --datasets_validation sameRadDynObs10quad10_3 \
+# --datasets_testing sameRadDynObs10quad10_3
 
-python src/master_script_custom.py \
---train false \
---model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 405 \
---datasets_training sameRadDynObs10quad10_3 \
---datasets_validation sameRadDynObs10quad10_3 \
---datasets_testing sameRadDynObs10quad10_3
+# python src/master_script_custom.py \
+# --train false \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 501 \
+# --datasets_training goalSequence1 \
+# --datasets_validation goalSequence1 \
+# --datasets_testing goalSequence1
 
-python src/master_script_custom.py \
---train false \
---model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 405 \
---datasets_training goalSequence1 \
---datasets_validation goalSequence1 \
---datasets_testing goalSequence1
-
-python src/master_script_custom.py \
---train false \
---model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 405 \
---datasets_training dynamic16quadsPosExchange \
---datasets_validation dynamic16quadsPosExchange \
---datasets_testing dynamic16quadsPosExchange
+# python src/master_script_custom.py \
+# --train false \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 501 \
+# --datasets_training dynamic16quadsPosExchange \
+# --datasets_validation dynamic16quadsPosExchange \
+# --datasets_testing dynamic16quadsPosExchange
 
 
 notify-send "Script has finished running"
