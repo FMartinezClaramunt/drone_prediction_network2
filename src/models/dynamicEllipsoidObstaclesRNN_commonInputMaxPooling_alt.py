@@ -43,10 +43,10 @@ class CommonEncoder(tfkl.Layer):
             print(f"{bcolors.FAIL}Size of the obstacles dense layer and the other quadrotors encoder should be the same. Enforcing size_obstacles_fc_layer=size_other_agents_state.{bcolors.ENDC}")
         
         self.batch_size = args.batch_size
+        self.past_horizon = args.past_horizon
         self.reg_factor = 0.01
         self.rnn_state_size_lstm_other_quads = args.size_other_agents_state
         self.fc_state_size_obstacles = args.size_obstacles_fc_layer
-        # self.rnn_state_size_bilstm = args.size_obstacles_bilstm + args.size_other_agents_bilstm
         
         self.lstm_other_quads = tfkl.LSTM(self.rnn_state_size_lstm_other_quads, activation = args.lstm_activation, name = 'lstm_other_quads', return_sequences = False, kernel_regularizer = tfkr.l2(self.reg_factor), recurrent_regularizer = tfkr.l2(self.reg_factor), bias_regularizer = tfkr.l2(self.reg_factor), activity_regularizer = tfkr.l2(self.reg_factor))
         self.fc_obs = tfkl.Dense(self.fc_state_size_obstacles, activation = args.fc_activation)
@@ -54,21 +54,26 @@ class CommonEncoder(tfkl.Layer):
         
     def call(self, x):        
         processed_objects = []
+                
+        # Trick in order to be able to deal with datasets without other robots
+        if "others_input" in x.keys():
+            for quad_idx in range(x["others_input"].shape[-1]):
+                processed_objects.append(self.lstm_other_quads(x["others_input"][:, :, :, quad_idx]))
+        else:
+            self.lstm_other_quads(tf.zeros((self.batch_size, self.past_horizon, 6)))    
         
-        for quad_idx in range(x["others_input"].shape[-1]):
-            processed_objects.append(self.lstm_other_quads(x["others_input"][:, :, :, quad_idx]))
-        
-        # Trick in order to be able to deal with datasets with datasets with no obstacles
+        # Trick in order to be able to deal with datasets without obstacles
         if "obstacles_input" in x.keys():
             for obs_idx in range(x["obstacles_input"].shape[-1]):
                 processed_objects.append(self.fc_obs(x["obstacles_input"][:, :, obs_idx]))
         else:
-            # self.fc_obs(x["others_input"][:, 0, :, 0])
             self.fc_obs(tf.zeros((self.batch_size, 6)))
-        
-        stacked_obs = tf.stack(processed_objects, axis = 1)
-        # out = self.bilstm(stacked_obs)
-        out = tf.math.reduce_max(stacked_obs, axis = 1)
+
+        if processed_objects == []:
+            out = -100 * tf.ones((0, self.rnn_state_size_lstm_other_quads))
+        else:
+            stacked_obj = tf.stack(processed_objects, axis = 1)
+            out = tf.math.reduce_max(stacked_obj, axis = 1)
         return out
 
 
