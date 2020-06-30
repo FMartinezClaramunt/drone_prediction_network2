@@ -155,7 +155,12 @@ class DataHandler():
         goal_array = data['log_quad_goal'] # [goal pose (4), timesteps, quadrotors] 
         state_array = data['log_quad_state_real'] # [states (9), timesteps, quadrotors] 
         logsize = int(data['logsize'])
-        n_quadrotors = goal_array.shape[2]
+        if len(goal_array.shape) == 3:
+            n_quadrotors = goal_array.shape[2]
+        else:
+            n_quadrotors = 1
+            goal_array = goal_array[:, :, np.newaxis]
+            state_array = state_array[:, :, np.newaxis]
 
         # Find last time step which can be used for training
         final_timestep = find_last_usable_step(goal_array, logsize)
@@ -365,8 +370,6 @@ class DataHandler():
                     else:
                         raise Exception(f"{bcolors.FAIL}Invalid obstacles input type{bcolors.ENDC}")
                         
-
-        
 
         if self.data_types["others_input_type"] != "none":
             others_input_list = []
@@ -615,10 +618,12 @@ class DataHandler():
         return dataset_out
 
 
-def find_last_usable_step(goal_array, logsize): 
-    intial_ignored_steps = 100
-    zero_index = np.argmax(np.all(goal_array[:, intial_ignored_steps:, :] == 0, axis=(0,2)))
-
+def find_last_usable_step(goal_array, logsize, intial_ignored_steps = 100): 
+    if len(goal_array) == 3:
+        zero_index = np.argmax(np.all(goal_array[:, intial_ignored_steps:, :] == 0, axis=(0,2)))
+    else:
+        zero_index = np.argmax(np.all(goal_array[:, intial_ignored_steps:] == 0, axis=0))
+    
     if zero_index == 0:
         zero_index = float('inf')
 

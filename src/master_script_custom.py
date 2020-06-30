@@ -54,7 +54,7 @@ model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
 # model_name = "onlyEllipsoidObstaclesRNN"
 # model_name = "onlyEllipsoidObstaclesRNN_RBF"
 
-model_number = 303
+model_number = 503
 
 TRANSFER_LEARNING_OTHERS = False
 learning_rate_others_encoder = 0 # TODO: Set up an option to optimize the weigths of the others encoder even when using transfer learning
@@ -121,15 +121,22 @@ PLOT_ELLIPSOIDS = False
 # datasets_validation = "sameRadDynObs10quad10_3"
 # datasets_test = datasets_validation
 
-datasets_training = "sameRadDynObs6quad6_1"
-datasets_validation = "sameRadDynObs6quad6_2"
+# datasets_training = "sameRadDynObs6quad6_1"
+# datasets_validation = "sameRadDynObs6quad6_2"
+# datasets_test = datasets_validation
+
+datasets_training = "sameRadDynObs10quad10_v2_1 sameRadStatObs10quad10_1"
+datasets_validation = "sameRadDynObs10quad10_v2_2 sameRadStatObs10quad10_2"
 datasets_test = datasets_validation
 
+# datasets_training = "goalSequence1"
+# datasets_validation = datasets_training
+# datasets_test = datasets_validation
 
 #### Training parameters ####
-MAX_EPOCHS = 15
+MAX_EPOCHS = 25
 MAX_STEPS = 1E6
-TRAIN_PATIENCE = 3 # Number of epochs before early stopping
+TRAIN_PATIENCE = 4 # Number of epochs before early stopping
 BATCH_SIZE = 256 
 regularization_factor = 0.01
 
@@ -141,7 +148,7 @@ obstacles_input_type = "dynamic_relvel" # {none, static, dynamic, dynamic_radii,
 target_type = "vel" # {vel}
 
 past_horizon = 10
-prediction_horizon = 10
+prediction_horizon = 20
 # test_prediction_horizons = "none"
 test_prediction_horizons = "5 10 15 20"
 separate_goals = True # To make sure that training trajectories keep goal position constant
