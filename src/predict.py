@@ -5,7 +5,7 @@ import numpy as np
 from utils.model_utils import model_selector
 
 model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
-model_number = 400
+model_number = 503
 
 class trajectory_predictor():
     def __init__(self, n_robots, n_obstacles, past_horizon=10, prediction_horizon=20, dt=0.05, model_name = model_name, model_number = model_number):
@@ -25,10 +25,16 @@ class trajectory_predictor():
         stored_args.prediction_horizon = self.prediction_horizon
         self.model = model_selector(stored_args)
         
+        assert "scaler" in stored_args
+        self.scaler = stored_args.scaler
+        
         self.input_data = {}
         self.input_data["query_input"] = np.zeros((self.n_robots, self.past_horizon, 3))
-        self.input_data["others_input"] = np.zeros((self.n_robots, self.past_horizon, 6, self.n_robots-1))
-        self.input_data["obstacles_input"] = np.zeros((self.n_robots, 6, self.n_obstacles))
+        if n_robots > 1:
+            self.input_data["others_input"] = np.zeros((self.n_robots, self.past_horizon, 6, self.n_robots-1))
+        if n_obstacles > 0:
+            self.input_data["obstacles_input"] = np.zeros((self.n_robots, 6, self.n_obstacles))
+        
         self.model.call(self.input_data)
         self.model.load_weights(checkpoint_path)
         
@@ -47,7 +53,11 @@ class trajectory_predictor():
             
             self.input_data["obstacles_input"][query_quad_idx] = obstacle_data - robot_data[0:6, -1, query_quad_idx:query_quad_idx+1]
         
-        vel_prediction = self.model.predict(self.input_data)
+        scaled_data = self.scaler.transform(self.input_data)
+        
+        scaled_data["target"] = self.model.predict(scaled_data)
+        vel_prediction = self.scaler.inverse_transform(scaled_data)["target"]
+        
         pos_prediction = np.zeros((self.n_robots, self.prediction_horizon+1, 3))
         pos_prediction[:, 0, :] = np.transpose(robot_data[0:3, -1 , :])
         for step in range(1, self.prediction_horizon+1):
