@@ -1,0 +1,14 @@
+<launch>
+
+    <!-- <node pkg="drone_prediction_network2" name="drone_trajectory_prediction" type="prediction_node.py" output="screen"> -->
+
+        <!-- set parameters -->
+        <param name="n_robots" value="3" />
+        <param name="n_obstacles" value="2" />
+        <param name="past_horizon" value="10" />
+        <param name="prediction_horizon" value="20" />
+        <param name="dt" value="0.05" />
+
+    <!-- </node> -->
+
+</launch>
