@@ -35,7 +35,7 @@ data_master_dir = os.path.join(root_dir, "data", "")
 raw_data_dir = os.path.join(data_master_dir, "Raw", "")
 tfrecord_data_dir = os.path.join(data_master_dir, "TFRecord", "")
 trained_models_dir = os.path.join(root_dir, "trained_models", "")
-summary_file = "trained_models_summary_v4.csv"
+summary_file = "trained_models_summary_v5.csv"
 
 #### Model selection ####
 # model_name = "varyingNQuadsRNN_v2"
@@ -54,7 +54,7 @@ model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
 # model_name = "onlyEllipsoidObstaclesRNN"
 # model_name = "onlyEllipsoidObstaclesRNN_RBF"
 
-model_number = 503
+model_number = 504
 
 TRANSFER_LEARNING_OTHERS = False
 learning_rate_others_encoder = 0 # TODO: Set up an option to optimize the weigths of the others encoder even when using transfer learning
@@ -134,10 +134,12 @@ datasets_test = datasets_validation
 # datasets_test = datasets_validation
 
 #### Training parameters ####
-MAX_EPOCHS = 25
+MAX_EPOCHS = 50
 MAX_STEPS = 1E6
 TRAIN_PATIENCE = 4 # Number of epochs before early stopping
-BATCH_SIZE = 256 
+OVERFITTING_CHECK = False # To check if training loss is much lower than validation loss
+OVERFITTING_CHECK_FACTOR = 0.7
+BATCH_SIZE = 64 
 regularization_factor = 0.01
 
 #### Network architecture ####
@@ -338,9 +340,15 @@ if args.train:
             break
         
         if patience_counter >= args.train_patience:
-            print("Maximum patience reached, terminating early")
+            print(f"{bcolors.FAIL}Maximum patience reached, terminating early")
             termination_type = "Max patience"
             break
+        
+        if args.overfitting_check and data.tfdataset_validation is not None:
+            if train_loss < args.overfitting_check_factor*val_loss:
+                print(f"{bcolors.FAIL}Train loss is less than %d%% of the validation loss, terminating early" % (args.overfitting_check_factor*100))
+                termination_type = "Overfitting check"
+                break
         
     if termination_type.lower() == "none":
         termination_type = "Max epochs"

@@ -669,16 +669,81 @@ class scaler():
         self.mins = {}
         self.maxs = {}
         for key in data.keys():    
-            if len(data[key].shape) == 3:
+            if key == "target" or key == "query_input":
                 self.mins[key] = data[key].min(axis=0).min(axis=0)
                 self.maxs[key] = data[key].max(axis=0).max(axis=0)
-            elif len(data[key].shape) == 4:
+            elif key == "obstacles_input":
+                self.mins[key] = data[key].min(axis=2).min(axis=0)
+                self.maxs[key] = data[key].max(axis=2).max(axis=0)
+            elif key == "others_input":
                 self.mins[key] = data[key].min(axis=3).min(axis=0).min(axis=0)
                 self.maxs[key] = data[key].max(axis=3).max(axis=0).max(axis=0)
             else:
                 raise Exception(f"{bcolors.FAIL}Data does not have the expected dimensions{bcolors.ENDC}")
-        
-        
+            
+            
+    def transform(self, data):
+        scaled_data = {}
+        for key in data.keys():
+            if tf.is_tensor(data[key]):
+                if key == "target" or key == "query_input":
+                    X_std = (data[key] - self.mins[key][np.newaxis,:])/(self.maxs[key][np.newaxis,:] - self.mins[key][np.newaxis,:])
+                    scaled_data[key] = X_std * (self.feature_range[1]-self.feature_range[0]) + self.feature_range[0]
+                elif key == "obstacles_input":
+                    X_std = (data[key] - self.mins[key][:, np.newaxis])/(self.maxs[key][:, np.newaxis] - self.mins[key][:, np.newaxis])
+                    scaled_data[key] = X_std * (self.feature_range[1]-self.feature_range[0]) + self.feature_range[0]
+                elif key == "others_input":
+                    X_std = (data[key] - self.mins[key][np.newaxis, :, np.newaxis])/(self.maxs[key][np.newaxis, :, np.newaxis] - self.mins[key][np.newaxis, :, np.newaxis])
+                    scaled_data[key] = X_std * (self.feature_range[1]-self.feature_range[0]) + self.feature_range[0]
+                else:
+                    raise Exception(f"{bcolors.FAIL}Data does not have the expected dimensions{bcolors.ENDC}")
+                
+            else:
+                if key == "target" or key == "query_input":
+                    X_std = (data[key] - self.mins[key][np.newaxis, np.newaxis, :])/(self.maxs[key][np.newaxis, np.newaxis, :] - self.mins[key][np.newaxis, np.newaxis, :])
+                    scaled_data[key] = X_std * (self.feature_range[1]-self.feature_range[0]) + self.feature_range[0]
+                elif key == "obstacles_input":
+                    X_std = (data[key] - self.mins[key][np.newaxis, :, np.newaxis])/(self.maxs[key][np.newaxis, :, np.newaxis] - self.mins[key][np.newaxis, :, np.newaxis])
+                    scaled_data[key] = X_std * (self.feature_range[1]-self.feature_range[0]) + self.feature_range[0]
+                elif key == "others_input":
+                    X_std = (data[key] - self.mins[key][np.newaxis, np.newaxis, :, np.newaxis])/(self.maxs[key][np.newaxis, np.newaxis, :, np.newaxis] - self.mins[key][np.newaxis, np.newaxis, :, np.newaxis])
+                    scaled_data[key] = X_std * (self.feature_range[1]-self.feature_range[0]) + self.feature_range[0]
+                else:
+                    raise Exception(f"{bcolors.FAIL}Data does not have the expected dimensions{bcolors.ENDC}")
+
+        return scaled_data
+
+    def inverse_transform(self, data):
+        unscaled_data = {}
+        for key in data.keys():
+            if key == "target" or key == "query_input":
+                X_std = (data[key] - self.feature_range[0])/(self.feature_range[1] - self.feature_range[0])
+                unscaled_data[key] = X_std * (self.maxs[key][np.newaxis, np.newaxis, :] - self.mins[key][np.newaxis, np.newaxis, :]) + self.mins[key][np.newaxis, np.newaxis, :]
+            elif key == "obstacles_input":
+                X_std = (data[key] - self.feature_range[0])/(self.feature_range[1] - self.feature_range[0])
+                unscaled_data[key] = X_std * (self.maxs[key][np.newaxis, :, np.newaxis] - self.mins[key][np.newaxis, :, np.newaxis]) + self.mins[key][np.newaxis, :, np.newaxis]
+            elif key == "others_input":
+                X_std = (data[key] - self.feature_range[0])/(self.feature_range[1] - self.feature_range[0])
+                unscaled_data[key] = X_std * (self.maxs[key][np.newaxis, np.newaxis, :, np.newaxis] - self.mins[key][np.newaxis, np.newaxis, :, np.newaxis]) + self.mins[key][np.newaxis, np.newaxis, :, np.newaxis]
+            else:
+                raise Exception(f"{bcolors.FAIL}Data does not have the expected dimensions{bcolors.ENDC}")
+            
+        return unscaled_data
+    
+    
+    """def fit(self, data):
+    self.mins = {}
+    self.maxs = {}
+    for key in data.keys():    
+        if len(data[key].shape) == 3:
+            self.mins[key] = data[key].min(axis=0).min(axis=0)
+            self.maxs[key] = data[key].max(axis=0).max(axis=0)
+        elif len(data[key].shape) == 4:
+            self.mins[key] = data[key].min(axis=3).min(axis=0).min(axis=0)
+            self.maxs[key] = data[key].max(axis=3).max(axis=0).max(axis=0)
+        else:
+            raise Exception(f"{bcolors.FAIL}Data does not have the expected dimensions{bcolors.ENDC}")
+    
     def transform(self, data):
         scaled_data = {}
         for key in data.keys():
@@ -720,7 +785,7 @@ class scaler():
                 X_std = (data[key] - self.feature_range[0])/(self.feature_range[1] - self.feature_range[0])
                 unscaled_data[key] = X_std * (self.maxs[key][np.newaxis, np.newaxis, :, np.newaxis] - self.mins[key][np.newaxis, np.newaxis, :, np.newaxis]) + self.mins[key][np.newaxis, np.newaxis, :, np.newaxis]
                 
-        return unscaled_data
+        return unscaled_data"""
         
 
 def obstacles_data_to_input(obstacles_input_data, past_horizon):

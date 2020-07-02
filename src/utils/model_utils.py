@@ -61,6 +61,8 @@ def parse_args(defaults):
     parser.add_argument('--max_epochs', type=int, default=defaults['MAX_EPOCHS'])
     parser.add_argument('--max_steps', type=int, default=defaults['MAX_STEPS'])
     parser.add_argument('--train_patience', type=int, default=defaults['TRAIN_PATIENCE'])
+    parser.add_argument('--overfitting_check', type=str2bool, default=defaults['OVERFITTING_CHECK'])
+    parser.add_argument('--overfitting_check_factor', type=int, default=defaults['OVERFITTING_CHECK_FACTOR'])
     parser.add_argument('--batch_size', type=int, default=defaults['BATCH_SIZE'])
     parser.add_argument('--regularization_factor', type=float, default=defaults['regularization_factor'])
 

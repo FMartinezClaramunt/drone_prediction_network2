@@ -616,15 +616,15 @@
 # --datasets_validation dynamic16quadsPosExchange \
 # --datasets_testing dynamic16quadsPosExchange
 
-python src/master_script_custom.py \
---train false \
---summary false \
---model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
---model_number 503 \
---others_input_type none \
---datasets_training sameRadDynObs10quad1_2 \
---datasets_validation sameRadDynObs10quad1_2 \
---datasets_testing sameRadDynObs10quad1_2
+# python src/master_script_custom.py \
+# --train false \
+# --summary false \
+# --model_name dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt \
+# --model_number 503 \
+# --others_input_type none \
+# --datasets_training sameRadDynObs10quad1_2 \
+# --datasets_validation sameRadDynObs10quad1_2 \
+# --datasets_testing sameRadDynObs10quad1_2
 
 # python src/master_script_custom.py \
 # --train false \
@@ -633,5 +633,77 @@ python src/master_script_custom.py \
 # --datasets_training sameRadStatObs10quad10_1 \
 # --datasets_validation sameRadStatObs10quad10_1 \
 # --datasets_testing sameRadStatObs10quad10_1
+
+python src/master_script_custom.py \
+--model_number 504 \
+--size_query_agent_state = 64 \
+--size_other_agents_state = 64 \
+--size_obstacles_fc_layer = 64 \
+--size_decoder_lstm = 128 \
+--size_fc_layer 64 \
+--past_horizon 10 \
+--prediction_horizon 20 \
+--fc_activation relu \
+--lstm_activation relu
+
+python src/master_script_custom.py \
+--model_number 505 \
+--size_query_agent_state = 64 \
+--size_other_agents_state = 64 \
+--size_obstacles_fc_layer = 64 \
+--size_decoder_lstm = 128 \
+--size_fc_layer 64 \
+--past_horizon 20 \
+--prediction_horizon 20 \
+--fc_activation relu \
+--lstm_activation relu
+
+python src/master_script_custom.py \
+--model_number 506 \
+--size_query_agent_state = 64 \
+--size_other_agents_state = 64 \
+--size_obstacles_fc_layer = 64 \
+--size_decoder_lstm = 128 \
+--size_fc_layer 64 \
+--past_horizon 20 \
+--prediction_horizon 30 \
+--fc_activation relu \
+--lstm_activation relu
+
+python src/master_script_custom.py \
+--model_number 507 \
+--size_query_agent_state = 64 \
+--size_other_agents_state = 64 \
+--size_obstacles_fc_layer = 64 \
+--size_decoder_lstm = 128 \
+--size_fc_layer 64 \
+--past_horizon 20 \
+--prediction_horizon 20 \
+--fc_activation sigmoid \
+--lstm_activation sigmoid
+
+python src/master_script_custom.py \
+--model_number 508 \
+--size_query_agent_state = 64 \
+--size_other_agents_state = 64 \
+--size_obstacles_fc_layer = 64 \
+--size_decoder_lstm = 128 \
+--size_fc_layer 64 \
+--past_horizon 20 \
+--prediction_horizon 20 \
+--fc_activation tanh \
+--lstm_activation tanh
+
+python src/master_script_custom.py \
+--model_number 509 \
+--size_query_agent_state = 256 \
+--size_other_agents_state = 256 \
+--size_obstacles_fc_layer = 256 \
+--size_decoder_lstm = 512 \
+--size_fc_layer 256 \
+--past_horizon 20 \
+--prediction_horizon 20 \
+--fc_activation relu \
+--lstm_activation relu
 
 notify-send "Script has finished running"
