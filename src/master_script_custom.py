@@ -54,7 +54,7 @@ model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
 # model_name = "onlyEllipsoidObstaclesRNN"
 # model_name = "onlyEllipsoidObstaclesRNN_RBF"
 
-model_number = 504
+model_number = 0
 
 TRANSFER_LEARNING_OTHERS = False
 learning_rate_others_encoder = 0 # TODO: Set up an option to optimize the weigths of the others encoder even when using transfer learning
@@ -74,7 +74,7 @@ SUMMARY = True # To include a summary of the results of the model in a csv file
 
 # To display and/or record an animation of the test dataset with the trajcetory predictions from the model
 DISPLAY = False
-RECORD = True
+RECORD = False
 EXPORT_PLOTTING_DATA = False
 N_FRAMES = 2000 # Number of frames to display/record
 DT = 0.05 # Used to compute the FPS of the video
@@ -87,51 +87,51 @@ PLOT_ELLIPSOIDS = False
 #                     goalSequence3\
 #                     goalSequence4"
 # datasets_validation = "goalSequence5"
-# datasets_test = datasets_validation
+# datasets_testing = datasets_validation
 
 # datasets_training = "dynamic16quads1\
 #                     dynamic16quadsPosExchange"
 # datasets_validation = "dynamic16quads2"
-# datasets_test = datasets_validation
+# datasets_testing = datasets_validation
 
 # datasets_training = "staticObs6quad10_1"
 # datasets_validation = "staticObs6quad10_2"
-# datasets_test = datasets_validation
+# datasets_testing = datasets_validation
 
 # datasets_training = "dynObs10quad10_1 dynObs10quad10_5 dynObs10quad10_6 dynObs10quad10_bugged dynObs10quad10_2"
 # datasets_validation = "dynObs10quad10_3 dynObs10quad10_4"
-# datasets_test = datasets_validation
+# datasets_testing = datasets_validation
 
 # datasets_training = "dynObs10quad10_2"
 # datasets_validation = "dynObs10quad10_3"
-# datasets_test = datasets_validation
+# datasets_testing = datasets_validation
 
 # datasets_training = "dynObs10quad10_small"
 # datasets_validation = "dynObs10quad10_small"
-# datasets_test = datasets_validation
+# datasets_testing = datasets_validation
 
 # datasets_training = "dynObs10quad1_1\
 #                     dynObs10quad1_2\
 #                     dynObs10quad1_3"
 # datasets_validation = "dynObs10quad1_4"
-# datasets_test = datasets_validation
+# datasets_testing = datasets_validation
 
 # datasets_training = "sameRadDynObs10quad10_1\
 #                     sameRadDynObs10quad10_2"
 # datasets_validation = "sameRadDynObs10quad10_3"
-# datasets_test = datasets_validation
+# datasets_testing = datasets_validation
 
 # datasets_training = "sameRadDynObs6quad6_1"
 # datasets_validation = "sameRadDynObs6quad6_2"
-# datasets_test = datasets_validation
+# datasets_testing = datasets_validation
 
 datasets_training = "sameRadDynObs10quad10_v2_1 sameRadStatObs10quad10_1"
 datasets_validation = "sameRadDynObs10quad10_v2_2 sameRadStatObs10quad10_2"
-datasets_test = datasets_validation
+datasets_testing = datasets_validation
 
 # datasets_training = "goalSequence1"
 # datasets_validation = datasets_training
-# datasets_test = datasets_validation
+# datasets_testing = datasets_validation
 
 #### Training parameters ####
 MAX_EPOCHS = 50
@@ -139,7 +139,7 @@ MAX_STEPS = 1E6
 TRAIN_PATIENCE = 4 # Number of epochs before early stopping
 OVERFITTING_CHECK = False # To check if training loss is much lower than validation loss
 OVERFITTING_CHECK_FACTOR = 0.7
-BATCH_SIZE = 64 
+BATCH_SIZE = 128 
 regularization_factor = 0.01
 
 #### Network architecture ####
@@ -199,8 +199,10 @@ if args.warmstart or not args.train:
     args = combine_args(args, stored_args) # To ensure the correct model architecture
 else:
     if os.path.isfile(checkpoint_path):
-        print(f"{bcolors.FAIL}WARNING: Rewriting previously trained model!{bcolors.ENDC}")
+        print(f"{bcolors.FAIL}WARNING: REWRITING PREVIOUSLY TRAINED MODEL!{bcolors.ENDC}")
+        time.sleep(10)
         Path(checkpoint_path).unlink() # Delete checkpoint if we are training a new model with an already existing experiment number to avoid problems if the training loop were to be prematurely stopped
+        print(f"{bcolors.FAIL}WARNING: EXISTING CHECKPOINT WAS DELETED!{bcolors.ENDC}")
     
     if os.path.isdir(recording_dir): # Delete recordings if we are training a new model with an already existing experiment number
         rmtree(recording_dir) 
@@ -285,7 +287,7 @@ if args.warmstart or args.transfer_learning_others or args.transfer_learning_obs
 #### Training loop ####
 if args.train:    
     # Store scaler in the parameters file
-    args.scaler = data.scaler
+    # args.scaler = data.scaler
     pkl.dump( args, open( parameters_path, "wb" ) )
     
     step = 0
@@ -306,7 +308,7 @@ if args.train:
             model.train_step(batch)
             step += 1
             if step > args.max_steps:
-                print("Max number of steps reached, terminating early")
+                print(f"{bcolors.FAIL}Max number of steps reached, terminating early{bcolors.ENDC}")
                 termination_type = "Max steps"
                 break
         train_loss = model.train_loss.result().numpy()
@@ -340,7 +342,7 @@ if args.train:
             break
         
         if patience_counter >= args.train_patience:
-            print(f"{bcolors.FAIL}Maximum patience reached, terminating early")
+            print(f"{bcolors.FAIL}Maximum patience reached, terminating early{bcolors.ENDC}")
             termination_type = "Max patience"
             break
         

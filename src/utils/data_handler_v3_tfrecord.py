@@ -73,7 +73,11 @@ class DataHandler():
             self.scaler = args.scaler
         else:
             self.scaler = self.getScaler() # Get scaler based on the data for the first quadrotor of the first training dataset
+            args.scaler = self.scaler
+        
         self.n_quadrotors, self.n_obstacles = self.getNObjects() # Get total number of quadrotors 
+        if self.n_quadrotors == 1:
+            self.data_types["others_input_type"] = "none"
         
         quadrotor_size = np.array([0.3, 0.3, 0.4])
         # obstacle_size = np.array([0.4, 0.4, 0.9])

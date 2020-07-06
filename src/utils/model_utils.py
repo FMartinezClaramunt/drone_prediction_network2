@@ -55,7 +55,7 @@ def parse_args(defaults):
     #### Dataset selection ####
     parser.add_argument('--datasets_training', help="Dataset names to be used for training, separated by spaces", type=str, default=defaults['datasets_training'])
     parser.add_argument('--datasets_validation', help="Dataset names to be used for training, separated by spaces", type=str, default=defaults['datasets_validation'])
-    parser.add_argument('--datasets_testing', help="Dataset names to be used for training, separated by spaces", type=str, default=defaults['datasets_test'])
+    parser.add_argument('--datasets_testing', help="Dataset names to be used for training, separated by spaces", type=str, default=defaults['datasets_testing'])
     
     #### Training parameters ####
     parser.add_argument('--max_epochs', type=int, default=defaults['MAX_EPOCHS'])
