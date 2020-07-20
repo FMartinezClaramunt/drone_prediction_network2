@@ -5,7 +5,7 @@ import numpy as np
 from utils.model_utils import model_selector
 
 model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
-model_number = 503
+model_number = 508
 
 class trajectory_predictor():
     def __init__(self, n_robots, n_obstacles, past_horizon=10, prediction_horizon=20, dt=0.05, model_name = model_name, model_number = model_number):
@@ -21,20 +21,24 @@ class trajectory_predictor():
         checkpoint_path = os.path.join(model_dir, "model_checkpoint.h5")
         
         assert os.path.isfile(checkpoint_path)    
-        stored_args = pkl.load( open( parameters_path, "rb" ) )
-        stored_args.prediction_horizon = self.prediction_horizon
-        self.model = model_selector(stored_args)
+        args = pkl.load( open( parameters_path, "rb" ) )
+        args.prediction_horizon = self.prediction_horizon
         
-        assert "scaler" in stored_args
-        self.scaler = stored_args.scaler
+        assert "scaler" in args
+        self.scaler = args.scaler
         
         self.input_data = {}
         self.input_data["query_input"] = np.zeros((self.n_robots, self.past_horizon, 3))
-        if n_robots > 1:
+        if self.n_robots > 1:
             self.input_data["others_input"] = np.zeros((self.n_robots, self.past_horizon, 6, self.n_robots-1))
-        if n_obstacles > 0:
+        else:
+            args.others_input_type = "none"
+        if self.n_obstacles > 0:
             self.input_data["obstacles_input"] = np.zeros((self.n_robots, 6, self.n_obstacles))
-        
+        else:
+            args.obstacles_input_type = "none"
+
+        self.model = model_selector(args)
         self.model.call(self.input_data)
         self.model.load_weights(checkpoint_path)
         
@@ -49,9 +53,11 @@ class trajectory_predictor():
             
             self.input_data["query_input"][query_quad_idx] = np.transpose( robot_data[3:6, : , query_quad_idx] )
             
-            self.input_data["others_input"][query_quad_idx] = np.moveaxis( robot_data[0:6, : , other_quad_idxs] - robot_data[0:6, :, query_quad_idx:query_quad_idx+1], 0, 1)
+            if self.n_robots > 1:
+                self.input_data["others_input"][query_quad_idx] = np.moveaxis( robot_data[0:6, : , other_quad_idxs] - robot_data[0:6, :, query_quad_idx:query_quad_idx+1], 0, 1)
             
-            self.input_data["obstacles_input"][query_quad_idx] = obstacle_data - robot_data[0:6, -1, query_quad_idx:query_quad_idx+1]
+            if self.n_obstacles > 0:
+                self.input_data["obstacles_input"][query_quad_idx] = obstacle_data - robot_data[0:6, -1, query_quad_idx:query_quad_idx+1]
         
         scaled_data = self.scaler.transform(self.input_data)
         

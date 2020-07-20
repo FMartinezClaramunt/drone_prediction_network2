@@ -762,6 +762,7 @@
 # --datasets_validation dynObs10quad1_1 \
 # --datasets_testing dynObs10quad1_1
 
+# tanh/tanh
 python src/master_script_custom.py \
 --model_number 511 \
 --size_query_agent_state 64 \
@@ -775,6 +776,7 @@ python src/master_script_custom.py \
 --lstm_activation tanh \
 --regularization_factor 0.01
 
+# relu/tanh
 python src/master_script_custom.py \
 --model_number 512 \
 --size_query_agent_state 64 \
@@ -788,6 +790,7 @@ python src/master_script_custom.py \
 --lstm_activation tanh \
 --regularization_factor 0.01
 
+# tanh/relu
 python src/master_script_custom.py \
 --model_number 513 \
 --size_query_agent_state 64 \
@@ -801,6 +804,21 @@ python src/master_script_custom.py \
 --lstm_activation relu \
 --regularization_factor 0.01
 
+# Baseline relu/relu
+python src/master_script_custom.py \
+--model_number 514 \
+--size_query_agent_state 64 \
+--size_other_agents_state 64 \
+--size_obstacles_fc_layer 64 \
+--size_decoder_lstm 128 \
+--size_fc_layer 64 \
+--past_horizon 20 \
+--prediction_horizon 20 \
+--fc_activation relu \
+--lstm_activation relu \
+--regularization_factor 0.01
+
+# tanh/tanh bigger w/ l=0.01
 python src/master_script_custom.py \
 --model_number 520 \
 --size_query_agent_state 128 \
@@ -814,6 +832,7 @@ python src/master_script_custom.py \
 --lstm_activation tanh \
 --regularization_factor 0.01
 
+# tanh/tanh bigger w/ l=0.025
 python src/master_script_custom.py \
 --model_number 521 \
 --size_query_agent_state 128 \
@@ -827,6 +846,7 @@ python src/master_script_custom.py \
 --lstm_activation tanh \
 --regularization_factor 0.025
 
+# tanh/tanh bigger w/ l=0.05
 python src/master_script_custom.py \
 --model_number 522 \
 --size_query_agent_state 128 \

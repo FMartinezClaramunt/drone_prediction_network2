@@ -38,6 +38,7 @@ class DataHandler():
         self.separate_goals = args.separate_goals
         self.separate_obstacles = args.separate_obstacles
         self.remove_stuck_quadrotors = args.remove_stuck_quadrotors
+        self.export_plotting_data = args.export_plotting_data
         
         # For model evaluation
         self.model_name = args.model_name
@@ -80,9 +81,9 @@ class DataHandler():
             self.data_types["others_input_type"] = "none"
         
         quadrotor_size = np.array([0.3, 0.3, 0.4])
-        # obstacle_size = np.array([0.4, 0.4, 0.9])
+        obstacle_size = np.array([0.4, 0.4, 0.9])
         self.quadrotor_sizes = quadrotor_size[:, np.newaxis] * np.ones((1, self.n_quadrotors))
-        # self.obstacle_sizes = obstacle_size[:,np.newaxis] * np.ones((1, self.n_obstacles))
+        self.obstacle_sizes = obstacle_size[:,np.newaxis] * np.ones((1, self.n_obstacles))
 
         # Get dataset object for the training data
         self.tfdataset_training = tf.data.TFRecordDataset(self.tfrecords_training).apply(self.dataset_setup)
@@ -143,7 +144,7 @@ class DataHandler():
         
     def getPlottingData(self, trained_model, test_dataset_idx = 0, quads_to_plot = -1, params = None):
         """
-        Takes converts data from the test set into data ready for plotting
+        Converts data from the test set into data ready for plotting
         """
         
         if params == None:
@@ -159,6 +160,7 @@ class DataHandler():
         goal_array = data['log_quad_goal'] # [goal pose (4), timesteps, quadrotors] 
         state_array = data['log_quad_state_real'] # [states (9), timesteps, quadrotors] 
         logsize = int(data['logsize'])
+        
         if len(goal_array.shape) == 3:
             n_quadrotors = goal_array.shape[2]
         else:
@@ -170,6 +172,7 @@ class DataHandler():
         final_timestep = find_last_usable_step(goal_array, logsize)
 
         trajs = np.swapaxes(state_array[0:3, 0:final_timestep, :], 0, 1)
+        vels = np.swapaxes(state_array[3:6, 0:final_timestep, :], 0, 1)
         goals = np.swapaxes(goal_array[0:3, 0:final_timestep, :], 0, 1)
 
         if 'log_obs_state_est' in data.keys():
@@ -184,6 +187,21 @@ class DataHandler():
                                         prediction_horizon+1,\
                                         3,\
                                         n_quadrotors))
+
+        if self.export_plotting_data and "log_quad_path" in data:
+            mpc_trajectory = np.zeros((trajs.shape[0]-prediction_horizon-self.past_horizon+1,\
+                        prediction_horizon+1,\
+                        3,\
+                        n_quadrotors))
+            mpc_trajectory[:, 1:] = np.swapaxes(data["log_quad_path"][0:3, :, self.past_horizon:final_timestep, :], 0, 2) # 2:final_timestep+2
+            
+            cvm_trajectory = np.zeros((trajs.shape[0]-prediction_horizon-self.past_horizon+1,\
+                        prediction_horizon+1,\
+                        3,\
+                        n_quadrotors))
+        else:
+            mpc_trajectory = None
+            cvm_trajectory = None
 
         if quads_to_plot == -1: # Plot all quads
             quads_to_plot = [idx for idx in range(n_quadrotors)]
@@ -202,11 +220,18 @@ class DataHandler():
             for timestep in range(1, prediction_horizon+1):
                 position_predictions[:, timestep, :, quad_idx] = position_predictions[:, timestep-1, :, quad_idx] \
                                                                 + unscaled_velocity_predictions[:, timestep-1, :] * self.dt
+                                                                
+                                                                
+                if cvm_trajectory is not None:                                                
+                    cvm_trajectory[:, timestep, :, quad_idx] = cvm_trajectory[:, timestep-1, :, quad_idx] \
+                                                                + vels[self.past_horizon:-prediction_horizon+1,:,:] * self.dt
         
         return {
             'trajectories': trajs,
             'obstacle_trajectories': obs_trajs,
             'predictions': position_predictions,
+            'mpc_trajectory': mpc_trajectory,
+            'cvm_trajectory': cvm_trajectory,
             'goals': goals
         }
         
@@ -226,6 +251,8 @@ class DataHandler():
             "quadrotor_past_trajectories": np.zeros((n_samples, past_horizon, 3, n_quadrotors)),
             "quadrotor_future_trajectories": np.zeros((n_samples, prediction_horizon + 1, 3, n_quadrotors)),
             "quadrotor_predicted_trajectories": data['predictions'],
+            "quadrotor_mpc_trajectories": data['mpc_trajectory'],
+            "quadrotor_cvm_trajectories": data['cvm_trajectory'],
             "goals": data['goals'][past_horizon-1:past_horizon-1+n_samples, :, :],
             "quadrotor_sizes": self.quadrotor_sizes,
             "obstacle_sizes": self.obstacle_sizes
