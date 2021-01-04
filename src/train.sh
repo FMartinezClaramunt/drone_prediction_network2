@@ -761,7 +761,7 @@
 # --datasets_training dynObs10quad1_1 \
 # --datasets_validation dynObs10quad1_1 \
 # --datasets_testing dynObs10quad1_1
-
+: <<'END'
 python src/master_script_custom.py \
 --model_number 511 \
 --size_query_agent_state 64 \
@@ -839,5 +839,18 @@ python src/master_script_custom.py \
 --fc_activation tanh \
 --lstm_activation tanh \
 --regularization_factor 0.05
+END
+python src/master_script_custom.py \
+ --model_number 0 \
+ --size_query_agent_state 64 \
+ --size_other_agents_state 64 \
+ --size_obstacles_fc_layer 64 \
+ --size_decoder_lstm 128 \
+ --size_fc_layer 64 \
+ --past_horizon 20 \
+ --prediction_horizon 20 \
+ --fc_activation tanh \
+ --lstm_activation tanh \
+ --batch_size 512
 
 notify-send "Script has finished running"

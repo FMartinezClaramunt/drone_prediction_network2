@@ -10,7 +10,9 @@ from utils.model_utils import parse_args, model_selector, combine_args, save_mod
 
 import pickle as pkl
 from tqdm import trange
+from numba import cuda
 
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
 # physical_devices = tf.config.list_physical_devices('GPU')
 # try:
 #     tf.config.experimental.set_memory_growth(physical_devices[0], True)
@@ -47,6 +49,7 @@ summary_file = "trained_models_summary_v5.csv"
 # model_name = "dynamicEllipsoidObstaclesRNN_commonInput"
 # model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling"
 model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
+model_name = "simple_RNN"
 # model_name = "dynamicEllipsoidObstaclesRNN_commonInput_extraFC"
 # model_name = "dynamicEllipsoidObstaclesRNN_separateStates"
 # model_name = "dynamicEllipsoidObstaclesRNN_customPooling"
