@@ -5,30 +5,34 @@
 clear 
 clc 
 
-dataset = "testSwap200_centralized";
-data_folder = "../../trained_models/dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt/508/Recordings/";
+% dataset = "testSwap200_centralized";
+% dataset = "randomCentralized_noObs";
+dataset = "randomCentralized_dynObs"; % step 174
+% data_folder = "../../data/Raw/";
+recordings_folder = "../../trained_models/dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt/508/Recordings/";
 
-data_file_name = data_folder + dataset + ".mat";
-animation_save_name = data_folder + dataset + ".avi";
+data_file_name = recordings_folder + dataset + ".mat";
+animation_save_name = recordings_folder + dataset + ".avi";
 
 %% Animation writer object
-obj = VideoWriter(animation_save_name);
-obj.Quality = 100;
-obj.FrameRate = 20;
-open(obj);
+% obj = VideoWriter(animation_save_name);
+% obj.Quality = 100;
+% obj.FrameRate = 20;
+% open(obj);
 
 %% Load and abstract data
 data = load(data_file_name);
 
-nSim       = size(data.goals, 1);               % N
-% nSim = 1000;
+nSim_max = 1200;
+nSim     = min(size(data.goals, 1), nSim_max);   % N
+
 nDim        = 3;
 nQuad       = size(data.quadrotor_positions, 3); % n
 
 if isempty(data.obstacle_positions)              % m
     nObs = 0;
 else
-    nObs = size(data.log_obs_state_est, 3);
+    nObs = size(data.obstacle_positions, 3);
 end
 
 quad_goal   = data.goals;                        % N*3*n
@@ -55,14 +59,14 @@ cfg.ifShowFigBox        =   1;
 cfg.ifShowFigGrid       =   1;
 cfg.ifShowQuadSize      =   1;
 cfg.ifShowQuadGoal      =   1;
-cfg.ifShowQuadTrajPast  =   1;
+cfg.ifShowQuadTrajPast  =   0;
 cfg.ifShowQuadTrajPlan  =   1;
 cfg.ifShowQuadTrajPredRNN  =   1;
 cfg.ifShowQuadTrajPredMPC   =   1;
 cfg.ifShowQuadTrajPredCVM   =   1;
-cfg.ifShowEgoTrajPred   =   1;      % if showing ego quad prediction traj
+cfg.ifShowEgoTrajPred   =   0;      % if showing ego quad prediction traj
 cfg.ifShowObsSize       =   1;
-cfg.ifShowLegend        =   0;
+cfg.ifShowLegend        =   1;
 
 % color of all quad
 cfg.color_quad = cell(1, nQuad);
@@ -79,14 +83,16 @@ cfg.color_quad_ego      = 'r';
 cfg.color_quad_other    = 'b';
 % color of goal
 cfg.color_goal_ego      = 'r';
-cfg.color_goal_other    = 'c';
+cfg.color_goal_other    = 'b';
 % trasparency
 cfg.alpha_ego           = 1.0;
 cfg.alpha_other         = 0.7;
 % color of trajectory
 cfg.color_traj_past     = 'b';
-cfg.color_traj_plan     = 'g';
-cfg.color_traj_pred     = 'r';
+cfg.color_traj_plan     = 'k';
+cfg.color_traj_pred_RNN = [0 0.4470 0.7410]; % Blue
+cfg.color_traj_pred_MPC = [0.6350 0.0780 0.1840]; % Red
+cfg.color_traj_pred_CVM = [0.4660 0.6740 0.1880]; % Green
 % color of obstacle
 cfg.color_obs           = [0.5 0.5 0.5];
 
@@ -97,7 +103,10 @@ idx_ego_quad            = 1;
 
 %% Initial plot
 % main figure
-fig_main = figure;
+% fig_main = figure;
+fig_main = figure('Position', [10 10 1200 900]);
+set(gcf,'color','w');
+
 axis([ws.xDim, ws.yDim, ws.zDim]);
 ax_main = fig_main.CurrentAxes;
 daspect(ax_main, [1 1 1]);
@@ -150,46 +159,49 @@ for iQuad = 1 : nQuad
         quad_size(:, iQuad), 'FaceColor', color_pos_temp, 'FaceAlpha', 0.2, ...
         'EdgeColor', color_pos_temp, 'EdgeAlpha', 0.1);
     end
-    % quad past traj
-    if cfg.ifShowQuadTrajPast == 1
-        fig_quad_traj_past{iQuad} = plot3(ax_main, quad_traj_past(1, :, 1, iQuad), ...
-            quad_traj_past(1, :, 2, iQuad), quad_traj_past(1, :, 3, iQuad), ...
-            'Color', cfg.color_traj_past, 'LineStyle', '-', 'LineWidth', 1.2);
-        fig_quad_traj_past{iQuad}.Color(4) = 0.6;   % transparency
-    end
-    % quad plan traj
-    if cfg.ifShowQuadTrajPlan == 1
-        fig_quad_traj_plan{iQuad} = plot3(ax_main, quad_traj_plan(1, :, 1, iQuad), ...
-            quad_traj_plan(1, :, 2, iQuad), quad_traj_plan(1, :, 3, iQuad), ...
-            'Color', cfg.color_traj_plan, 'LineStyle', '-', 'LineWidth', 1.5);
-        fig_quad_traj_plan{iQuad}.Color(4) = 1.0;   % transparency
-    end
-    % quad pred traj
-    if cfg.ifShowQuadTrajPredRNN == 1
-        fig_quad_traj_pred_RNN{iQuad} = plot3(ax_main, quad_traj_pred_RNN(1, :, 1, iQuad), ...
-            quad_traj_pred_RNN(1, :, 2, iQuad), quad_traj_pred_RNN(1, :, 3, iQuad), ...
-            'Color', cfg.color_traj_pred, 'LineStyle', '-', 'LineWidth', 1.5);
-        fig_quad_traj_pred_RNN{iQuad}.Color(4) = 0.8;   % transparency
-    end
-    % quad mpc traj
-    if cfg.ifShowQuadTrajPredMPC == 1
-        fig_quad_traj_pred_MPC{iQuad} = plot3(ax_main, quad_traj_pred_MPC(1, :, 1, iQuad), ...
-            quad_traj_pred_MPC(1, :, 2, iQuad), quad_traj_pred_MPC(1, :, 3, iQuad), ...
-            'Color', cfg.color_traj_pred, 'LineStyle', '-', 'LineWidth', 1.5);
-        fig_quad_traj_pred_MPC{iQuad}.Color(4) = 0.8;   % transparency
-    end
-    % quad cvm traj
-    if cfg.ifShowQuadTrajPredCVM == 1
-        fig_quad_traj_pred_CVM{iQuad} = plot3(ax_main, quad_traj_pred_CVM(1, :, 1, iQuad), ...
-            quad_traj_pred_CVM(1, :, 2, iQuad), quad_traj_pred_CVM(1, :, 3, iQuad), ...
-            'Color', cfg.color_traj_pred, 'LineStyle', '-', 'LineWidth', 1.5);
-        fig_quad_traj_pred_CVM{iQuad}.Color(4) = 0.8;   % transparency
+    
+    if iQuad ~= idx_ego_quad || (iQuad == idx_ego_quad && cfg.ifShowEgoTrajPred)
+        % quad past traj
+        if cfg.ifShowQuadTrajPast == 1
+            fig_quad_traj_past{iQuad} = plot3(ax_main, quad_traj_past(1, :, 1, iQuad), ...
+                quad_traj_past(1, :, 2, iQuad), quad_traj_past(1, :, 3, iQuad), ...
+                'Color', cfg.color_traj_past, 'LineStyle', '-', 'LineWidth', 2.0);
+            fig_quad_traj_past{iQuad}.Color(4) = 0.6;   % transparency
+        end
+        % quad plan traj
+        if cfg.ifShowQuadTrajPlan == 1
+            fig_quad_traj_plan{iQuad} = plot3(ax_main, quad_traj_plan(1, :, 1, iQuad), ...
+                quad_traj_plan(1, :, 2, iQuad), quad_traj_plan(1, :, 3, iQuad), ...
+                'Color', cfg.color_traj_plan, 'LineStyle', ':', 'LineWidth', 2.0);
+            fig_quad_traj_plan{iQuad}.Color(4) = 1.0;   % transparency
+        end
+        % quad pred traj
+        if cfg.ifShowQuadTrajPredRNN == 1
+            fig_quad_traj_pred_RNN{iQuad} = plot3(ax_main, quad_traj_pred_RNN(1, :, 1, iQuad), ...
+                quad_traj_pred_RNN(1, :, 2, iQuad), quad_traj_pred_RNN(1, :, 3, iQuad), ...
+                'Color', cfg.color_traj_pred_RNN, 'LineStyle', '-', 'LineWidth', 2.0);
+            fig_quad_traj_pred_RNN{iQuad}.Color(4) = 0.8;   % transparency
+        end
+        % quad mpc traj
+        if cfg.ifShowQuadTrajPredMPC == 1
+            fig_quad_traj_pred_MPC{iQuad} = plot3(ax_main, quad_traj_pred_MPC(1, :, 1, iQuad), ...
+                quad_traj_pred_MPC(1, :, 2, iQuad), quad_traj_pred_MPC(1, :, 3, iQuad), ...
+                'Color', cfg.color_traj_pred_MPC, 'LineStyle', '-', 'LineWidth', 2.0);
+            fig_quad_traj_pred_MPC{iQuad}.Color(4) = 0.8;   % transparency
+        end
+        % quad cvm traj
+        if cfg.ifShowQuadTrajPredCVM == 1
+            fig_quad_traj_pred_CVM{iQuad} = plot3(ax_main, quad_traj_pred_CVM(1, :, 1, iQuad), ...
+                quad_traj_pred_CVM(1, :, 2, iQuad), quad_traj_pred_CVM(1, :, 3, iQuad), ...
+                'Color', cfg.color_traj_pred_CVM, 'LineStyle', '-', 'LineWidth', 2.0);
+            fig_quad_traj_pred_CVM{iQuad}.Color(4) = 0.8;   % transparency
+        end
     end
 end
 
 idx_other_quad = min([1:idx_ego_quad-1 idx_ego_quad+1:nQuad]); % Just to get a handle for the legend
 
-legend_text = "Query robot";
+legend_text = "Ego robot";
 legend_handles = fig_quad_pos{idx_ego_quad};
 % legend_text{1} = "Query robot";
 % legend_handles{1} = fig_quad_pos{idx_ego_quad};
@@ -197,43 +209,45 @@ legend_handles = fig_quad_pos{idx_ego_quad};
 legend_text(end+1) = "Other robot";
 legend_handles(end+1) = fig_quad_pos{idx_other_quad};
 
-if cfg.ifShowEgoTrajPred
-    legend_text(end+1) = "Past trajectory";
-    legend_handles(end+1) = fig_quad_traj_past{idx_ego_quad};
-elseif cfg.ifShowQuadTrajPast
+% if cfg.ifShowEgoTrajPred
+%     legend_text(end+1) = "Past trajectory";
+%     legend_handles(end+1) = fig_quad_traj_past{idx_ego_quad};
+% end
+
+if cfg.ifShowQuadTrajPast
     legend_text(end+1) = "Past trajectory";
     legend_handles(end+1) = fig_quad_traj_past{idx_other_quad};
 end
 
 if cfg.ifShowQuadTrajPlan
     legend_text(end+1) = "Future trajectory";
-    legend_handles(end+1) = fig_quad_traj_plan{1};
+    legend_handles(end+1) = fig_quad_traj_plan{idx_other_quad};
 end
 
 if cfg.ifShowQuadTrajPredRNN
     legend_text(end+1) = "Predicted trajectory RNN";
-    legend_handles(end+1) = fig_quad_traj_pred_RNN{1};
+    legend_handles(end+1) = fig_quad_traj_pred_RNN{idx_other_quad};
 end
 
 if cfg.ifShowQuadTrajPredMPC
     legend_text(end+1) = "Predicted trajectory MPC";
-    legend_handles(end+1) = fig_quad_traj_pred_MPC{1};
+    legend_handles(end+1) = fig_quad_traj_pred_MPC{idx_other_quad};
 end
 
 if cfg.ifShowQuadTrajPredCVM
     legend_text(end+1) = "Predicted trajectory CVM";
-    legend_handles(end+1) = fig_quad_traj_pred_CVM{1};
+    legend_handles(end+1) = fig_quad_traj_pred_CVM{idx_other_quad};
 end
 
 if cfg.ifShowQuadGoal
     legend_text(end+1) = "Goal";
-    legend_handles(end+1) = fig_quad_goal{1};
+    legend_handles(end+1) = fig_quad_goal{idx_other_quad};
 end
 
 
 %% obs plot
 fig_obs_pos  = cell(nObs, 1);               % quad pos
-fig_obs_size = cell(nObs, 1);               % quad size
+fig_obs_size = cell(nObs, 1);               % 100quad size
 for jObs = 1 : nObs
     % obs pos
     fig_obs_pos{jObs} = scatter3(ax_main, obs_pos(1, 1, jObs), ...
@@ -261,11 +275,12 @@ end
 
 %% Legend
 if cfg.ifShowLegend
-    legend(legend_handles, legend_text)
+    lgd = legend(legend_handles, legend_text, 'location', 'northeast');
+    lgd.FontSize = 12;
 end
 
 %% Animation
-for kStep = 1 : nSim - 100
+for kStep = 1 : nSim
     if(mod(kStep, 10) == 0)
         fprintf('[%s] Step [%d] \n',datestr(now,'HH:MM:SS'), kStep);
     end
@@ -319,13 +334,13 @@ for kStep = 1 : nSim - 100
         end
         % pred traj MPC
         if cfg.ifShowQuadTrajPredMPC == 1
-            set(fig_quad_traj_pred_RNN{iQuad}, 'XData', quad_traj_pred_MPC(kStep, :, 1, iQuad), ...
+            set(fig_quad_traj_pred_MPC{iQuad}, 'XData', quad_traj_pred_MPC(kStep, :, 1, iQuad), ...
                 'YData', quad_traj_pred_MPC(kStep, :, 2, iQuad), ...
                 'ZData', quad_traj_pred_MPC(kStep, :, 3, iQuad));
         end
         % pred traj CVM
         if cfg.ifShowQuadTrajPredCVM == 1
-            set(fig_quad_traj_pred_RNN{iQuad}, 'XData', quad_traj_pred_CVM(kStep, :, 1, iQuad), ...
+            set(fig_quad_traj_pred_CVM{iQuad}, 'XData', quad_traj_pred_CVM(kStep, :, 1, iQuad), ...
                 'YData', quad_traj_pred_CVM(kStep, :, 2, iQuad), ...
                 'ZData', quad_traj_pred_CVM(kStep, :, 3, iQuad));
         end
@@ -353,6 +368,11 @@ for kStep = 1 : nSim - 100
             end
         end
     end
+    
+    xlabel("X (m)", 'FontSize', 12); ylabel("Y (m)", 'FontSize', 12); zlabel("Z (m)", 'FontSize', 12);
+    xticks(-5:2.5:5); yticks(-5:2.5:5);
+    ax = gca;
+    ax.FontSize = 14;
     
     drawnow limitrate
 %     pause(0.005);

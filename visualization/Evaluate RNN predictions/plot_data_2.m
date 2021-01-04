@@ -9,10 +9,10 @@ animation_save_name = "animation.avi"
 data_file_name = 'test_plotting_data_10k.mat'
 
 %% Animation writer object
-obj = VideoWriter(animation_save_name);
-obj.Quality = 100;
-obj.FrameRate = 20;
-open(obj);
+% obj = VideoWriter(animation_save_name);
+% obj.Quality = 100;
+% obj.FrameRate = 20;
+% open(obj);
 
 %% Load and abstract data
 data = load(data_file_name);
@@ -305,7 +305,7 @@ for kStep = 1 : nSim - 100
     drawnow limitrate
 %     pause(0.005);
     f = getframe(gcf);
-    writeVideo(obj, f)
+%     writeVideo(obj, f)
 end
 
 obj.close();
