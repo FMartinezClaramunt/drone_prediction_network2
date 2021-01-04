@@ -5,8 +5,15 @@ from utils.model_utils import model_selector
 from utils.data_handler_v3_tfrecord import find_last_usable_step, expand_sequence
 from scipy.io import loadmat
 import matplotlib.pyplot as plt
+import copy
 
-dataset_name = "testSwap200_centralized"
+# dataset_name = "testSwap200_centralized"
+# dataset_name = "randomCentralized_noObs"
+# dataset_name = "randomCentralized_staticObs"
+# dataset_name = "randomCentralized_dynObs"
+# dataset_name = "randomCentralized_noObs4"
+# dataset_name = "randomCentralized_dynObs4"
+dataset_name = "centralized_20drones"
 
 model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
 model_number = 508
@@ -37,23 +44,25 @@ dataset_path = os.path.join(raw_data_dir, dataset_name + ".mat")
 
 data = loadmat(dataset_path)
 
-goal_array = data['log_quad_goal'] # [goal pose (4), samples, quadrotors] 
-state_array = data['log_quad_state_real'] # [states (9), samples, quadrotors] 
-obs_state_array = data["log_obs_state_est"] # [states (6), samples, obstacles] 
-mpc_plan = data["log_quad_path"] # [pos(3), timesteps, horizon, samples, quadrotors]
+goal_array = copy.copy(data['log_quad_goal']) # [goal pose (4), samples, quadrotors] 
+state_array = copy.copy(data['log_quad_state_real']) # [states (9), samples, quadrotors] 
+obs_state_array = copy.copy(data["log_obs_state_est"]) # [states (6), samples, obstacles] 
+mpc_plan = copy.copy(data["log_quad_path"]) # [pos(3), timesteps, horizon, samples, quadrotors]
 logsize = int(data['logsize'])
 
+del data
+
 # final_timestep = find_last_usable_step(goal_array, logsize)
-all_close_to_goal = np.all(np.linalg.norm(goal_array[0:3] - state_array[0:3], axis = 0) < 0.2, axis = -1)
-all_stopped = np.all(np.linalg.norm(state_array[3:6], axis = 0) < 0.2, axis = -1)
-all_reached = all_close_to_goal & all_stopped
-all_reached_idxs = np.where(all_reached)[0]
-final_timestep = all_reached_idxs[np.where(all_reached_idxs[10:] - all_reached_idxs[0:-10] == 10)[0][0]]
+# all_close_to_goal = np.all(np.linalg.norm(goal_array[0:3] - state_array[0:3], axis = 0) < 0.2, axis = -1)
+# all_stopped = np.all(np.linalg.norm(state_array[3:6], axis = 0) < 0.2, axis = -1)
+# all_reached = all_close_to_goal & all_stopped
+# all_reached_idxs = np.where(all_reached)[0]
+# final_timestep = min(20000, all_reached_idxs[np.where(all_reached_idxs[10:] - all_reached_idxs[0:-10] == 10)[0][0]])
+final_timestep = 20000
 
 past_timesteps_idxs = [idx for idx in range(0, final_timestep - prediction_horizon)]
 future_timesteps_idxs = [idx for idx in range(past_horizon, final_timestep)]
 
-goal_array = goal_array[:, 0:final_timestep]
 state_array = state_array[:, 0:final_timestep]
 mpc_plan = mpc_plan[:, :, 2:final_timestep+2]
 
@@ -62,8 +71,11 @@ if len(goal_array.shape) == 2:
 else:
     n_robots = goal_array.shape[2]
 
+del goal_array
+
 if obs_state_array.size == 0:
     n_obstacles = 0
+    obs_state_array = 0
 else:
     n_obstacles = obs_state_array.shape[2]
     obs_state_array = obs_state_array[:, 0:final_timestep]
@@ -89,6 +101,8 @@ else:
 
 model.call(dummy_input_data)
 model.load_weights(checkpoint_path)
+
+del dummy_input_data
 
 if model.stateful:
     for i in range(len(model.layers)):
@@ -117,11 +131,22 @@ for query_quad_idx in range(n_robots):
             input_data["others_input"][sample_idxs, :, :, idx] = expand_sequence( state_array[0:6, past_timesteps_idxs, other_quad_idxs[idx]] - state_array[0:6, past_timesteps_idxs, query_quad_idx], past_horizon )
     
     if n_obstacles > 0:
-        input_data["obstacles_input"][sample_idxs] = np.moveaxis( obs_state_array[:, past_timesteps_idxs[past_horizon-1:], :] - state_array[0:6, past_timesteps_idxs[past_horizon-1:], query_quad_idx:query_quad_idx+1], [0, 1, 2], [2, 0, 1])
+        input_data["obstacles_input"][sample_idxs] = np.moveaxis( obs_state_array[:, past_timesteps_idxs[past_horizon-1:], :] - state_array[0:6, past_timesteps_idxs[past_horizon-1:], query_quad_idx:query_quad_idx+1], [0, 1, 2], [1, 0, 2])
+
+del state_array
+del obs_state_array
+del mpc_plan
 
 scaled_data = scaler.transform(input_data)
 scaled_data["target"] = model.predict(scaled_data)
-vel_prediction = scaler.inverse_transform(scaled_data)["target"]
+del scaled_data["query_input"]
+del scaled_data["others_input"]
+if "obstacles_input" in scaled_data:
+    del scaled_data["obstacles_input"]
+# vel_prediction = scaler.inverse_transform(scaled_data)["target"]
+vel_prediction = scaler.inverse_transform({"target": scaled_data["target"]})["target"]
+
+del scaled_data
 
 for step in range(1, prediction_horizon+1):
     pos_prediction_RNN[:, step, :] = pos_prediction_RNN[:, step-1, :] + dt * vel_prediction[:, step-1, :]
@@ -143,18 +168,51 @@ print(f"\nMeans CV:\t\t", all_means_CV[4::5], f"\nStandard deviations CV:\t", al
 print(f"\nMeans MPC:\t\t", all_means_MPC[4::5], f"\nStandard deviations MPC:", all_stds_MPC[4::5])
 print(f"\nMeans RNN:\t\t", all_means_RNN[4::5], f"\nStandard deviations RNN:", all_stds_RNN[4::5])
 
-plt.plot([0] + list(all_means_CV), label="CVM")
-plt.plot([0] + list(all_means_MPC), label="MPC")
-plt.plot([0] + list(all_means_RNN), label="RNN")
+
+"""fig, ax = plt.subplots(figsize=(8, 6))
+
+y_CV = np.array([0] + list(all_means_CV))
+delta_CV = 0.3*np.array([0] + list(all_stds_CV))
+ax.plot(y_CV, label="CVM", color = 'b')
+ax.fill_between(np.arange(0,21), y_CV-delta_CV, y_CV+delta_CV, color='b', alpha=0.3)
+
+y_MPC = np.array([0] + list(all_means_MPC))
+delta_MPC = 0.3*np.array([0] + list(all_stds_MPC))
+ax.plot(y_MPC, label="MPC", color='r')
+ax.fill_between(np.arange(0,21), y_MPC-delta_MPC, y_MPC+delta_MPC, color='r', alpha=0.3)
+
+y_RNN = np.array([0] + list(all_means_RNN))
+delta_RNN = 0.3*np.array([0] + list(all_means_RNN))
+ax.plot(y_RNN, label="RNN", color='g')
+ax.fill_between(np.arange(0,21), y_RNN-delta_RNN, y_RNN+delta_RNN, color='g', alpha=0.3)
+
 
 plt.xlabel('Future timestep')
 plt.ylabel('Displacement error [m]')
 plt.xticks(np.arange(0, 21.0, 2.0))
+ax.set_xlim(-0.1, 20.1)
+ax.set_ylim(-0.02, 0.7)
 plt.legend(loc="upper left")
 plt.grid()
 
 plt.savefig("evaluation_" + dataset_name+'.pdf', bbox_inches='tight')
-plt.show()
+plt.show()"""
+
+data = {
+    "CVM":{
+        "mean": all_means_CV,
+        "std": all_stds_CV,
+    },
+    "MPC":{
+        "mean": all_means_MPC,
+        "std": all_stds_MPC,
+    },
+    "RNN":{
+        "mean": all_means_RNN,
+        "std": all_stds_RNN,
+    }
+}
+pkl.dump(data, open( "test_" + dataset_name + ".pkl", "wb" ))
 
 print("Done")
 

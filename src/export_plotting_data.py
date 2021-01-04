@@ -8,7 +8,8 @@ from pathlib import Path
 
 WORKSPACE_LIMITS = np.array([5, 5, 2.4])
 
-dataset_name = "testSwap200_centralized"
+# dataset_name = "testSwap200_centralized"
+dataset_name = "randomCentralized_dynObs"
 
 model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
 model_number = 508
@@ -42,6 +43,10 @@ def main():
     export_plotting_data_path = os.path.join(recording_dir, dataset_name + ".mat")
 
     data = loadmat(dataset_path)
+    keys = copy.copy(list(data.keys()))
+    for key in keys:
+        if key != "log_quad_goal" and key != "log_obs_state_est" and key != "log_quad_state_real" and key != "log_quad_path" and key != "logsize":
+            del data[key]
 
     n_robots = data['log_quad_goal'].shape[2]
     n_obstacles = data['log_obs_state_est'].shape[2]
@@ -235,6 +240,7 @@ def getPlottingData(data, trained_model, scaler, prediction_horizon, past_horizo
         unscaled_velocity_predictions = unscaled_data["target"]
         
         position_predictions[:, 0, :, quad_idx] = trajs[past_horizon:-prediction_horizon+1, :, quad_idx]
+        cvm_trajectory[:, 0, :, quad_idx] = trajs[past_horizon:-prediction_horizon+1, :, quad_idx]
         for timestep in range(1, prediction_horizon+1):
             position_predictions[:, timestep, :, quad_idx] = position_predictions[:, timestep-1, :, quad_idx] \
                                                             + unscaled_velocity_predictions[:, timestep-1, :] * dt
