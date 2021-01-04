@@ -4,10 +4,14 @@ test*
 *.pyc
 *.mp4
 *.avi
-visualization/.mat
+visualization/*.mat
 data/TFRecord/
+data/Raw/
 .vscode/
 *.csv
 visualization/animation.avi
 
 .idea/
+
+*.pdf
+*.zip
