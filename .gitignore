@@ -4,6 +4,7 @@ test*
 *.pyc
 *.mp4
 data/TFRecord/
+data/Raw/
 .vscode/
 *.csv
 visualization/animation.avi
