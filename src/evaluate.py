@@ -13,7 +13,8 @@ import copy
 # dataset_name = "randomCentralized_dynObs"
 # dataset_name = "randomCentralized_noObs4"
 # dataset_name = "randomCentralized_dynObs4"
-dataset_name = "centralized_20drones"
+# dataset_name = "centralized_20drones"
+dataset_name = "cent20_log_20210103_122943" # same as centralized_20drones
 
 model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
 model_number = 508
