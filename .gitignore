@@ -3,6 +3,8 @@ videos/
 test*
 *.pyc
 *.mp4
+*.avi
+visualization/*.mat
 data/TFRecord/
 data/Raw/
 .vscode/
@@ -10,3 +12,6 @@ data/Raw/
 visualization/animation.avi
 
 .idea/
+
+*.pdf
+*.zip
