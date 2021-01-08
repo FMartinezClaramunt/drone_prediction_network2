@@ -10,14 +10,18 @@ import copy
 # dataset_name = "testSwap200_centralized"
 # dataset_name = "randomCentralized_noObs"
 # dataset_name = "randomCentralized_staticObs"
-# dataset_name = "randomCentralized_dynObs"
+dataset_name = "randomCentralized_dynObs"
 # dataset_name = "randomCentralized_noObs4"
 # dataset_name = "randomCentralized_dynObs4"
 # dataset_name = "centralized_20drones"
-dataset_name = "cent20_log_20210103_122943" # same as centralized_20drones
+# dataset_name = "cent20_log_20210103_122943" # same as centralized_20drones
+# dataset_name = "cent20_10obs_log_20210106_233859"
 
-model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
-model_number = 508
+
+# model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
+model_name = "simple_RNN"
+# model_number = 508
+model_number = 0
 prediction_horizon = 20
 past_horizon = 20
 dt = 0.05
@@ -213,7 +217,7 @@ data = {
         "std": all_stds_RNN,
     }
 }
-pkl.dump(data, open( "test_" + dataset_name + ".pkl", "wb" ))
+# pkl.dump(data, open( "test_" + dataset_name + ".pkl", "wb" ))
 
 print("Done")
 
