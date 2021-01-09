@@ -3,7 +3,7 @@ import pickle as pkl
 import numpy as np
 from utils.model_utils import model_selector
 from utils.data_handler_v3_tfrecord import find_last_usable_step, expand_sequence
-from scipy.io import loadmat
+from scipy.io import loadmat, savemat
 import matplotlib.pyplot as plt
 import copy
 
@@ -17,11 +17,11 @@ import copy
 # dataset_name = "cent20_log_20210103_122943" # same as centralized_20drones
 # dataset_name = "cent20_10obs_log_20210106_233859"
 
-datasets = ["randomCentralized_noObs", "randomCentralized_dynObs", "randomCentralized_noObs4", "randomCentralized_dynObs4"]
+datasets = ["randomCentralized_noObs", "randomCentralized_dynObs", "randomCentralized_noObs4", "randomCentralized_dynObs4", "cent20_large_log_20210107_212200", "cent20_10obs_large_log_20210107_182450"]
 
 
 iRNN_model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
-iRNN_model_number = 503
+iRNN_model_number = 508
 
 sRNN_model_name = "simple_RNN"
 sRNN_model_number = 0
@@ -227,7 +227,8 @@ for dataset_name in datasets:
             "std": all_stds_iRNN,
         }
     }
-    pkl.dump(data, open( "results10_" + dataset_name + ".pkl", "wb" ))
+    # pkl.dump(data, open( "results10_" + dataset_name + ".pkl", "wb" ))
+    savemat(open( "results10_" + dataset_name + ".mat", "wb" ), mdict=data )
 
 print("Done")
 
