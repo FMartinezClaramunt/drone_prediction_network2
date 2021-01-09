@@ -18,7 +18,7 @@ import copy
 # dataset_name = "cent20_10obs_log_20210106_233859"
 
 datasets = ["randomCentralized_noObs", "randomCentralized_dynObs", "randomCentralized_noObs4", "randomCentralized_dynObs4", "cent20_large_log_20210107_212200", "cent20_10obs_large_log_20210107_182450"]
-
+prefix = "results10_"
 
 iRNN_model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
 iRNN_model_number = 508
@@ -30,39 +30,40 @@ prediction_horizon = 20
 past_horizon = 10
 dt = 0.05
 
-############ Load iRNN model ############
 root_dir = os.path.dirname(sys.path[0])
-iRNN_model_dir = os.path.join(root_dir, "trained_models", iRNN_model_name, str(iRNN_model_number))
-iRNN_parameters_path = os.path.join(iRNN_model_dir, "model_parameters.pkl")
-iRNN_checkpoint_path = os.path.join(iRNN_model_dir, "model_checkpoint.h5")
 
-assert os.path.isfile(iRNN_checkpoint_path)    
-args = pkl.load( open( iRNN_parameters_path, "rb" ) )
-args.prediction_horizon = prediction_horizon
-args.past_horizon = past_horizon
-
-assert "scaler" in args
-scaler = args.scaler
-
-model_iRNN = model_selector(args)
-
-############ Load sRNN model ############
-sRNN_model_dir = os.path.join(root_dir, "trained_models", sRNN_model_name, str(sRNN_model_number))
-sRNN_parameters_path = os.path.join(sRNN_model_dir, "model_parameters.pkl")
-sRNN_checkpoint_path = os.path.join(sRNN_model_dir, "model_checkpoint.h5")
-
-assert os.path.isfile(sRNN_checkpoint_path)    
-args = pkl.load( open( sRNN_parameters_path, "rb" ) )
-args.prediction_horizon = prediction_horizon
-args.past_horizon = past_horizon
-
-assert "scaler" in args
-scaler = args.scaler
-
-model_sRNN = model_selector(args)
-
-############ Load data ############
 for dataset_name in datasets:
+    ############ Load iRNN model ############
+    iRNN_model_dir = os.path.join(root_dir, "trained_models", iRNN_model_name, str(iRNN_model_number))
+    iRNN_parameters_path = os.path.join(iRNN_model_dir, "model_parameters.pkl")
+    iRNN_checkpoint_path = os.path.join(iRNN_model_dir, "model_checkpoint.h5")
+
+    assert os.path.isfile(iRNN_checkpoint_path)    
+    args = pkl.load( open( iRNN_parameters_path, "rb" ) )
+    args.prediction_horizon = prediction_horizon
+    args.past_horizon = past_horizon
+
+    assert "scaler" in args
+    scaler = args.scaler
+
+    model_iRNN = model_selector(args)
+
+    ############ Load sRNN model ############
+    sRNN_model_dir = os.path.join(root_dir, "trained_models", sRNN_model_name, str(sRNN_model_number))
+    sRNN_parameters_path = os.path.join(sRNN_model_dir, "model_parameters.pkl")
+    sRNN_checkpoint_path = os.path.join(sRNN_model_dir, "model_checkpoint.h5")
+
+    assert os.path.isfile(sRNN_checkpoint_path)    
+    args = pkl.load( open( sRNN_parameters_path, "rb" ) )
+    args.prediction_horizon = prediction_horizon
+    args.past_horizon = past_horizon
+
+    assert "scaler" in args
+    scaler = args.scaler
+
+    model_sRNN = model_selector(args)
+    
+    ############ Load data ############
     print("Evaluating dataset: ", dataset_name)
     
     data_master_dir = os.path.join(root_dir, "data", "")
@@ -181,7 +182,7 @@ for dataset_name in datasets:
     scaled_data["target"] = model_sRNN.predict(scaled_data)
     vel_prediction_sRNN = scaler.inverse_transform({"target": scaled_data["target"]})["target"]
 
-    del scaled_data
+    del scaled_data, model_iRNN, model_sRNN
 
     for step in range(1, prediction_horizon+1):
         pos_prediction_iRNN[:, step, :] = pos_prediction_iRNN[:, step-1, :] + dt * vel_prediction_iRNN[:, step-1, :]
@@ -227,8 +228,8 @@ for dataset_name in datasets:
             "std": all_stds_iRNN,
         }
     }
-    # pkl.dump(data, open( "results10_" + dataset_name + ".pkl", "wb" ))
-    savemat(open( "results10_" + dataset_name + ".mat", "wb" ), mdict=data )
+    pkl.dump(data, open( prefix + dataset_name + ".pkl", "wb" ))
+    savemat(open( prefix + dataset_name + ".mat", "wb" ), mdict=data )
 
 print("Done")
 
