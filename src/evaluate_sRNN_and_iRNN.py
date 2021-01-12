@@ -17,8 +17,9 @@ import copy
 # dataset_name = "cent20_log_20210103_122943" # same as centralized_20drones
 # dataset_name = "cent20_10obs_log_20210106_233859"
 
-datasets = ["randomCentralized_noObs", "randomCentralized_dynObs", "randomCentralized_noObs4", "randomCentralized_dynObs4", "cent20_large_log_20210107_212200", "cent20_10obs_large_log_20210107_182450"]
-prefix = "results10_"
+# datasets = ["randomCentralized_noObs", "randomCentralized_dynObs", "randomCentralized_noObs4", "randomCentralized_dynObs4", "cent20_large_log_20210107_212200", "cent20_10obs_large_log_20210107_182450"]
+datasets = ["cent20_large_log_20210107_212200", "cent20_10obs_large_log_20210107_182450"]
+prefix = "results20_"
 
 iRNN_model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
 iRNN_model_number = 508
