@@ -17,6 +17,8 @@ dataset_name = "randomCentralized_dynObs"
 # dataset_name = "cent20_log_20210103_122943" # same as centralized_20drones
 # dataset_name = "cent20_10obs_log_20210106_233859"
 
+# dataset_name = "cent20_large_log_20210107_212200"
+# dataset_name = "cent20_10obs_large_log_20210107_182450"
 
 # model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
 model_name = "simple_RNN"
