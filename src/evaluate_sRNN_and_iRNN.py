@@ -45,7 +45,7 @@ for dataset_name in datasets:
     args.past_horizon = past_horizon
 
     assert "scaler" in args
-    scaler = args.scaler
+    iRNN_scaler = args.scaler
 
     model_iRNN = model_selector(args)
 
@@ -60,7 +60,7 @@ for dataset_name in datasets:
     args.past_horizon = past_horizon
 
     assert "scaler" in args
-    scaler = args.scaler
+    sRNN_scaler = args.scaler
 
     model_sRNN = model_selector(args)
     
@@ -175,15 +175,16 @@ for dataset_name in datasets:
     del mpc_plan
 
     print("Obtaining predictions for iRNN")
-    scaled_data = scaler.transform(input_data)
-    scaled_data["target"] = model_iRNN.predict(scaled_data)
-    vel_prediction_iRNN = scaler.inverse_transform({"target": scaled_data["target"]})["target"]
+    iRNN_scaled_data = iRNN_scaler.transform(input_data)
+    iRNN_scaled_data["target"] = model_iRNN.predict(iRNN_scaled_data)
+    vel_prediction_iRNN = iRNN_scaler.inverse_transform({"target": iRNN_scaled_data["target"]})["target"]
 
     print("Obtaining predictions for sRNN")
-    scaled_data["target"] = model_sRNN.predict(scaled_data)
-    vel_prediction_sRNN = scaler.inverse_transform({"target": scaled_data["target"]})["target"]
+    sRNN_scaled_data = sRNN_scaler.transform(input_data)
+    sRNN_scaled_data["target"] = model_sRNN.predict(sRNN_scaled_data)
+    vel_prediction_sRNN = sRNN_scaler.inverse_transform({"target": sRNN_scaled_data["target"]})["target"]
 
-    del scaled_data, model_iRNN, model_sRNN
+    del iRNN_scaled_data, sRNN_scaled_data, model_iRNN, model_sRNN
 
     for step in range(1, prediction_horizon+1):
         pos_prediction_iRNN[:, step, :] = pos_prediction_iRNN[:, step-1, :] + dt * vel_prediction_iRNN[:, step-1, :]
