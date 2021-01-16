@@ -9,7 +9,9 @@ from pathlib import Path
 WORKSPACE_LIMITS = np.array([5, 5, 2.4])
 
 # dataset_name = "testSwap200_centralized"
-dataset_name = "randomCentralized_dynObs"
+# dataset_name = "randomCentralized_dynObs"
+# dataset_name = "cent20_large_log_20210107_212200"
+dataset_name = "cent20_10obs_large_log_20210107_182450"
 
 model_name = "dynamicEllipsoidObstaclesRNN_commonInputMaxPooling_alt"
 model_number = 508
